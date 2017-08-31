@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 
 from antlr4 import *
-from pddlpy import pddlLexer
-from pddlpy import pddlParser
+import pddlLexer
+import pddlParser
+# from pddlpy import pddlLexer
+# from pddlpy import pddlParser
 
 
 import itertools
