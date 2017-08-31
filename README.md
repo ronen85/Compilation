@@ -1,8 +1,8 @@
-# pythonpddl
-This is a python PDDL parser - compilator tool. 
-It is based on: 
-pddlpy [https://github.com/hfoffani/pddl-lib]
-pythonpddl [https://github.com/karpase/pythonpddl]
+# Code for thesis
+This is a tool used to test a compilation based method. 
+this tool is partially based on: 
+ [https://github.com/hfoffani/pddl-lib]
+ [https://github.com/karpase/pythonpddl]
 
 # Requirements
 This assume you have ANTLR4 installed somewhere to generate the parsing files from pddl.g4
