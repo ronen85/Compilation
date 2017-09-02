@@ -77,8 +77,9 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['antlr4-python2-runtime;python_version<"3"',
-                      'antlr4-python3-runtime;python_version>="3"'],
+    # install_requires=['antlr4-python2-runtime;python_version<"3"',
+                      # 'antlr4-python3-runtime;python_version>="3"']
+	install_requires=[],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
