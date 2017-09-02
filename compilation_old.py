@@ -1263,7 +1263,7 @@ def MakeProblem(dom, prob, agentslist, waitlist, print_condition):
 
 if __name__ == "__main__":
     print '\n'*100
-    parse = True
+    parse = False
     make_preds = False
     make_funcs = False
     make_consts = False
@@ -1278,7 +1278,7 @@ if __name__ == "__main__":
     grab_goals = False
     make_initial_state = False
     make_goal_state = False
-    make_compiled_domain = False
+    make_compiled_domain = True
     make_compiled_problem = True
     print_condition = True
     fixADL = True
