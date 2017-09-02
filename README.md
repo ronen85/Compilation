@@ -6,6 +6,9 @@ this tool is partially based on:
 
 # Requirements
 This assume you have ANTLR4 installed somewhere to generate the parsing files from pddl.g4
+More requirements:
+1. antlr4-python2-runtime
+2. updated pip verison.
 
 # Installation Instructions
 ```
