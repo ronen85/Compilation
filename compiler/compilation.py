@@ -336,7 +336,7 @@ def MakeEffs_s(action, constants, waitlist, print_condition = False):
         effs.append(MakeLocalEff(u'end', f, False))
         effs.append(MakeGlobalEff(u'end', f, False))
     for f in pref_inv:
-        effs.append(MakeInvEff(u'start', f, 'decrease'))
+        effs.append(MakeInvEff(u'end', f, 'decrease'))
 
     # print effects
     if print_condition:
