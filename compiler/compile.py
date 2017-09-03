@@ -20,7 +20,7 @@ def grabFileAsList(file_address):
 			new_list.append(line.rstrip())
 	return new_list;
 
-def Test(print_condition = False):
+def Test(FixADL = True, print_condition = False):
 	domainfile = '../expfiles/drink/drink-world2.pddl'
 	problemfile = '../expfiles/drink/drink-prob2.pddl'
 	agentsfile = '../expfiles/drink/agentsfile.txt'
@@ -28,8 +28,11 @@ def Test(print_condition = False):
 	agentslist = grabFileAsList(agentsfile)
 	waitlist = grabFileAsList(waitfile)
 	[dom, prob] = pddl.parseDomainAndProblem(domainfile, problemfile)
-	c_domain = MakeDomain(dom, prob, agentslist, waitlist)
+	c_domain = MakeDomain(dom, prob, agentslist, waitlist, FixADL = True)
 	c_problem = MakeProblem(dom, prob, agentslist, waitlist)
+	if FixADL:
+		for action in c_domain.durative_actions:
+			action.cond = FixADLConds(action.cond, True)
 	if os.path.exists('test'):
 		c_domain_file = open('test/c_domain_file.pddl','wb')
 		c_domain_file.write(c_domain.asPDDL())

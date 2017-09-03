@@ -487,8 +487,12 @@ def FixADLConds(conds, print_condition = False):
         if cond.formula.op == 'not':
             if print_condition:
                 print cond.asPDDL(), ' has a not condition'
-            cond.formula.op = None
-            cond.formula.subformulas[0].name = 'isnt-' + cond.formula.subformulas[0].name
+            if cond.asPDDL().startswith('isnt'):
+                cond.formula.op = None
+                cond.formula.subformulas[0].name = cond.formula.subformulas[0].name[5:]
+            else:
+                cond.formula.op = None
+                cond.formula.subformulas[0].name = 'isnt-' + cond.formula.subformulas[0].name
             if print_condition:
                 print cond.asPDDL(), ' is the new condition'
     return fixedconds;
@@ -1109,7 +1113,7 @@ def MakeActions_end_f(agentslist, dom, prob, print_condition = False):
             print '\nthe (', i+1 ,') action is: \n', end_f_actions[i].asPDDL()
     return end_f_actions;
 
-def MakeDomain(dom, prob, agentslist, waitlist, print_condition = False):
+def MakeDomain(dom, prob, agentslist, waitlist, FixADL = False, print_condition = False): #TODO: fix the arguments in callings
     name = 'c' + dom.name
     if print_condition:
         print ' the name of the new domain is:\n  ', name
@@ -1142,8 +1146,15 @@ def MakeDomain(dom, prob, agentslist, waitlist, print_condition = False):
     durative_actions = []
     for dact in dom.durative_actions: # a_s
         durative_actions.append(MakeActions_s(dact, constants, waitlist, False))
+    a_f_start = []
     for dact in dom.durative_actions: # a_f_start
-        durative_actions += MakeActions_fstart(dact, constants, waitlist, False)
+        if not FixADL:
+            durative_actions += MakeActions_fstart(dact, constants, waitlist, False)
+        else:
+            a_f_start = MakeActions_fstart(dact, constants, waitlist, False)
+            for action in a_f_start:
+                action.conds = FixADLConds(action.cond)
+                durative_actions.append(deepcopy(action))
     for dact in dom.durative_actions: # a_f_end
         durative_actions += MakeActions_fend(dact, constants, waitlist, False)
     for dact in dom.durative_actions: # a_finv_start
@@ -1263,14 +1274,14 @@ def MakeProblem(dom, prob, agentslist, waitlist, print_condition = False):
 
 if __name__ == "__main__":
     print '\n'*100
-    parse = False
+    parse = True
     make_preds = False
     make_funcs = False
-    make_consts = False
+    make_consts = True
     make_action_s = False
     make_action_fstart = False
     make_action_fend = False
-    make_action_finv_start = False
+    make_action_finv_start = True
     make_action_finv_end = False
     make_action_wx = False
     make_action_end_s = False
@@ -1278,15 +1289,15 @@ if __name__ == "__main__":
     grab_goals = False
     make_initial_state = False
     make_goal_state = False
-    make_compiled_domain = True
-    make_compiled_problem = True
+    make_compiled_domain = False
+    make_compiled_problem = False
     print_condition = True
     fixADL = True
     waitlist = ['on-table']
     agentslist = ['person1', 'person2']
 
     if parse:
-        (dom,prob) = pddl.parseDomainAndProblem('../expfiles/drink-world2.pddl', '../expfiles/drink-prob2.pddl')
+        (dom,prob) = pddl.parseDomainAndProblem('../expfiles/drink/drink-world2.pddl', '../expfiles/drink/drink-prob2.pddl')
     if make_preds:
         preds = MakePredicates(dom, prob, waitlist, print_condition)
     if make_funcs:
