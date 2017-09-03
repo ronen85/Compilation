@@ -1109,7 +1109,7 @@ def MakeActions_end_f(agentslist, dom, prob, print_condition = False):
             print '\nthe (', i+1 ,') action is: \n', end_f_actions[i].asPDDL()
     return end_f_actions;
 
-def MakeDomain(dom, prob, agentslist, waitlist, print_condition):
+def MakeDomain(dom, prob, agentslist, waitlist, print_condition = False):
     name = 'c' + dom.name
     if print_condition:
         print ' the name of the new domain is:\n  ', name
@@ -1241,7 +1241,7 @@ def MakeGoalState(dom, prob, agentslist, print_condition):
         print goal_state.asPDDL()
     return goal_state
 
-def MakeProblem(dom, prob, agentslist, waitlist, print_condition):
+def MakeProblem(dom, prob, agentslist, waitlist, print_condition = False):
     #     def __init__(self, name, domainname, objects, initialstate, goal, metric=None):
     name = 'c' + prob.name
     domainname = 'c' + dom.name
