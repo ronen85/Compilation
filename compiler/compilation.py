@@ -19,6 +19,8 @@ def MakeReqs(dom, prob = None):
     reqs = deepcopy(dom.reqs)
     if not (u':fluents' in dom.reqs):
         reqs.append(u':fluents')
+    if not (u':durative-actions' in dom.reqs):
+        reqs.append(u':fluents')
     return reqs;
 
 def MakeTypes(dom, prob = None):
