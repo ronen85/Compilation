@@ -1178,6 +1178,11 @@ def MakeInitialState(dom, prob, agentslist, waitlist, constants, print_condition
     # act as a formula
     act = pddl.Formula([pddl.Predicate('act', pddl.TypedArgList([]))], None)
     initial_state.append(act)
+    # {isnt-fin for all agents}
+    for agent in agentslist:
+        arg = pddl.TypedArg(agent)
+        form = pddl.Formula([pddl.Predicate('isnt-fin', pddl.TypedArgList([arg]))], None)
+        initial_state.append(form)
     # {f_i V f e initial state}
     for f in prob.initialstate:
         for agent in agentslist:
@@ -1294,15 +1299,16 @@ if __name__ == "__main__":
     make_initial_state = False
     make_goal_state = False
     make_compiled_domain = True
-    make_compiled_problem = False
+    make_compiled_problem = True
     make_files = True
     print_condition = True
     FixADL = True
     waitlist = ['on-table']
     agentslist = ['person1', 'person2']
-
+    domain_path = '../expfiles/drink/drink-world3.pddl'
+    problem_path = '../expfiles/drink/drink-prob3.pddl'
     if parse:
-        (dom,prob) = pddl.parseDomainAndProblem('../expfiles/drink/drink-world2.pddl', '../expfiles/drink/drink-prob2.pddl')
+        (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
     if make_preds:
         preds = MakePredicates(dom, prob, waitlist, print_condition)
     if make_funcs:
@@ -1362,7 +1368,7 @@ if __name__ == "__main__":
     if make_compiled_domain:
         print '\n'*50
         print 'Parsing domain ...'
-        (dom,prob) = pddl.parseDomainAndProblem('../expfiles/drink/drink-world2.pddl', '../expfiles/drink/drink-prob2.pddl')
+        (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
         print 'Parsing domain and problem complete.\n'
         print 'Compiling new domain ...\n'
         c_domain = MakeDomain(dom, prob, agentslist, waitlist, FixADL, print_condition)
@@ -1373,6 +1379,10 @@ if __name__ == "__main__":
     if make_compiled_problem:
         print '\n'*50
         print 'Parsing problem ...'
-        (dom,prob) = pddl.parseDomainAndProblem('../expfiles/drink-world2.pddl', '../expfiles/drink-prob2.pddl')
+        (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
         print 'Parsing domain and problem complete.\n'
         c_problem = MakeProblem(dom, prob, agentslist, waitlist, print_condition)
+        if make_files:
+            c_problem_file = open('c_problem_file_tmp.pddl','wb')
+            c_problem_file.write(c_problem.asPDDL())
+            c_problem_file.close()
