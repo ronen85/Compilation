@@ -20,7 +20,7 @@ def MakeReqs(dom, prob = None):
     if not (u':fluents' in dom.reqs):
         reqs.append(u':fluents')
     if not (u':durative-actions' in dom.reqs):
-        reqs.append(u':fluents')
+        reqs.append(u':durative-actions')
     return reqs;
 
 def MakeTypes(dom, prob = None):
