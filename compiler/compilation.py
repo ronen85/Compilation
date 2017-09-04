@@ -961,7 +961,7 @@ def MakeActions_end_s(agentslist, dom, prob, print_condition = False):
     for name in agentslist:
         action_name = 'end-' + name + '-s'
         parameters = pddl.TypedArgList([])
-        pre = MakeConds_end_s(prob, name, False)
+        pre = MakeConds_end_s(prob, name, agentslist, False)
         effs = MakeEffs_end_s(name, False)
         end_s = pddl.Action(action_name, parameters, pre, effs)
         end_s_actions.append(end_s)
@@ -971,14 +971,14 @@ def MakeActions_end_s(agentslist, dom, prob, print_condition = False):
             print '\nthe (', i+1 ,') action is: \n', end_s_actions[i].asPDDL()
     return end_s_actions;
 
-def MakeConds_end_s(prob, name, print_condition):
+def MakeConds_end_s(prob, name, agentslist, print_condition):
     subformulas = [] #list of predicates
     # {not fin_i}
     argslist = pddl.TypedArgList([pddl.TypedArg(name)])
     pred = pddl.Predicate('isnt-fin', argslist)
     subformulas.append(pred)
     # {f_g, f_i forall f e G_i}
-    agent_goals = GrabGoals(prob, name, print_condition)
+    agent_goals = GrabGoals(prob, name, agentslist, print_condition)
     for goal in agent_goals:
         local_name = goal.name + '-l'
         local_args = [pddl.TypedArg(name)] + goal.args.args
@@ -1019,8 +1019,17 @@ def MakeEffs_end_s(name, print_condition):
             print ' ', eff.asPDDL()
     return effs;
 
-def GrabGoals(prob, name, print_condition = False):
-    '''grabs the goals from prob and returns them as list of predicates.'''
+def get_first_common_element(x,y):
+    ''' Fetches first element from x that is common for both lists
+        or return None if no such an element is found.
+    '''
+    for i in x:
+        if i in y:
+            return i
+    return None
+
+def GrabGoals(prob, name, agentslist, print_condition = False):
+    ''' grabs the goals from prob and returns them as list of predicates.'''
     preds = []
     for form in prob.goal.subformulas:
         if form.op != None or len(form.subformulas) != 1:
@@ -1029,23 +1038,25 @@ def GrabGoals(prob, name, print_condition = False):
         else:
             if len(form.subformulas[0].args.args) == 0:
                 preds.append(deepcopy(form.subformulas[0]))
-            for arg in form.subformulas[0].args.args:
-                if arg.arg_name == name:
+            else:
+                arg_list = map(lambda x: x.arg_name, form.subformulas[0].args.args)
+                if name in arg_list: # if at least one arg is the named agent -> this is a goal
                     preds.append(deepcopy(form.subformulas[0]))
-                    break
+                elif get_first_common_element(arg_list, agentslist) == None: # if all args are objects who are not agents -> this is a goal
+                    preds.append(deepcopy(form.subformulas[0]))
     if print_condition:
         print '\nthe goals of ',name,' are:'
         print ' '.join(map(lambda x: x.asPDDL(), preds))
     return preds;
 
-def MakeConds_end_f(prob, name, inverse_goal, print_condition = False):
+def MakeConds_end_f(prob, name, inverse_goal, agentslist, print_condition = False):
     subformulas = []
     # {not fin_i}
     argslist = pddl.TypedArgList([pddl.TypedArg(name)])
     pred = pddl.Predicate('isnt-fin', argslist)
     subformulas.append(pred)
     # {f_i forall f e G_i}
-    agent_goals = GrabGoals(prob, name, print_condition)
+    agent_goals = GrabGoals(prob, name, agentslist, print_condition)
     for goal in agent_goals:
         local_name = goal.name + '-l'
         local_args = [pddl.TypedArg(name)] + goal.args.args
@@ -1056,7 +1067,7 @@ def MakeConds_end_f(prob, name, inverse_goal, print_condition = False):
     if inverse_goal.name.startswith('isnt-'):
         inverse_goal_name = inverse_goal.name[5:] + '-g'
     else:
-        inverse_goal_name = 'isnt-' + inverse_goal.name
+        inverse_goal_name = 'isnt-' + inverse_goal.name + '-g'
     inverse_goal_pred = pddl.Predicate(inverse_goal_name, inverse_goal.args )
     subformulas.append(deepcopy(inverse_goal_pred))
     pre = pddl.Formula(subformulas, "and")
@@ -1102,11 +1113,11 @@ def MakeActions_end_f(agentslist, dom, prob, print_condition = False):
     if print_condition: print '\nMaking end_f actions:'
     end_f_actions = []
     for name in agentslist:
-        agent_goals = GrabGoals(prob, name, print_condition = False)
+        agent_goals = GrabGoals(prob, name, agentslist, print_condition = False)
         for inverse_goal in agent_goals:
             action_name = 'end-' + name + '-' + inverse_goal.name +'-f'
             parameters = pddl.TypedArgList([])
-            pre = MakeConds_end_f(prob, name, inverse_goal, print_condition)
+            pre = MakeConds_end_f(prob, name, inverse_goal, agentslist, print_condition)
             effs = MakeEffs_end_f(name, print_condition)
             end_f = pddl.Action(action_name, parameters, pre, effs)
             end_f_actions.append(deepcopy(end_f))
@@ -1301,7 +1312,7 @@ if __name__ == "__main__":
     make_compiled_domain = True
     make_compiled_problem = True
     make_files = True
-    print_condition = True
+    print_condition = False
     FixADL = True
     waitlist = ['on-table']
     agentslist = ['person1', 'person2']
@@ -1357,7 +1368,7 @@ if __name__ == "__main__":
         print '\n'*50
         end_f_actions = MakeActions_end_f(agentslist, dom, prob, True)
     if grab_goals:
-        goals = GrabGoals(prob, 'person2', True)
+        goals = GrabGoals(prob, 'person2', agentslist, True)
     if make_initial_state:
         print '\nBuilding initial state ...'
         constants = MakeConstants(dom, prob)
@@ -1366,7 +1377,7 @@ if __name__ == "__main__":
         print '\nBuilding goal state ...'
         goal_state = MakeGoalState(dom, prob, agentslist, print_condition)
     if make_compiled_domain:
-        print '\n'*50
+        print '\n'*2
         print 'Parsing domain ...'
         (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
         print 'Parsing domain and problem complete.\n'
@@ -1377,7 +1388,7 @@ if __name__ == "__main__":
             c_domain_file.write(c_domain.asPDDL())
             c_domain_file.close()
     if make_compiled_problem:
-        print '\n'*50
+        print '\n'*2
         print 'Parsing problem ...'
         (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
         print 'Parsing domain and problem complete.\n'
