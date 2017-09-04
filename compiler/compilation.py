@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import os
 sys.path.append("../pythonpddl")
 import pddl
 from antlr4 import *
@@ -480,14 +481,14 @@ def FixADLConds(conds, print_condition = False):
     # get conds as a list of timedformula
     # make a copy
     # loop over all the conds
-    # where there is a not condition add isnt- to the name
+    # where there is a not condition add 'isnt-' to the name
     # remove the not condition
     fixedconds = deepcopy(conds)
     for cond in fixedconds:
         if cond.formula.op == 'not':
             if print_condition:
                 print cond.asPDDL(), ' has a not condition'
-            if cond.asPDDL().startswith('isnt'):
+            if cond.formula.subformulas[0].name.startswith('isnt'):
                 cond.formula.op = None
                 cond.formula.subformulas[0].name = cond.formula.subformulas[0].name[5:]
             else:
@@ -1113,7 +1114,7 @@ def MakeActions_end_f(agentslist, dom, prob, print_condition = False):
             print '\nthe (', i+1 ,') action is: \n', end_f_actions[i].asPDDL()
     return end_f_actions;
 
-def MakeDomain(dom, prob, agentslist, waitlist, FixADL = False, print_condition = False): #TODO: fix the arguments in callings
+def MakeDomain(dom, prob, agentslist, waitlist, FixADL = False, print_condition = False): #TODO: add FixADL argument
     name = 'c' + dom.name
     if print_condition:
         print ' the name of the new domain is:\n  ', name
@@ -1146,15 +1147,9 @@ def MakeDomain(dom, prob, agentslist, waitlist, FixADL = False, print_condition 
     durative_actions = []
     for dact in dom.durative_actions: # a_s
         durative_actions.append(MakeActions_s(dact, constants, waitlist, False))
-    a_f_start = []
+    # a_f_start = []
     for dact in dom.durative_actions: # a_f_start
-        if not FixADL:
-            durative_actions += MakeActions_fstart(dact, constants, waitlist, False)
-        else:
-            a_f_start = MakeActions_fstart(dact, constants, waitlist, False)
-            for action in a_f_start:
-                action.conds = FixADLConds(action.cond)
-                durative_actions.append(deepcopy(action))
+        durative_actions += MakeActions_fstart(dact, constants, waitlist, False)
     for dact in dom.durative_actions: # a_f_end
         durative_actions += MakeActions_fend(dact, constants, waitlist, False)
     for dact in dom.durative_actions: # a_finv_start
@@ -1164,6 +1159,13 @@ def MakeDomain(dom, prob, agentslist, waitlist, FixADL = False, print_condition 
     for dact in dom.durative_actions: # a_wait
         durative_actions += MakeActions_Wait(dact, constants, waitlist, False)
     durative_actions = filter(None, durative_actions)
+    if FixADL:
+        if print_condition:
+            print '\nremove ADL from durative_actions conditions...'
+        for i in range(len(durative_actions)):
+            durative_actions[i].cond = FixADLConds(durative_actions[i].cond)
+        if print_condition:
+            print 'ADL is removed from durative_actions conditions.\n'
     if print_condition:
         print ' the durative actions are:\n', map(lambda x: str(x.name) , durative_actions)
     c_domain = pddl.Domain(name, reqs, types, constants, predicates, functions, actions, durative_actions)
@@ -1277,11 +1279,11 @@ if __name__ == "__main__":
     parse = True
     make_preds = False
     make_funcs = False
-    make_consts = True
+    make_consts = False
     make_action_s = False
     make_action_fstart = False
     make_action_fend = False
-    make_action_finv_start = True
+    make_action_finv_start = False
     make_action_finv_end = False
     make_action_wx = False
     make_action_end_s = False
@@ -1289,10 +1291,11 @@ if __name__ == "__main__":
     grab_goals = False
     make_initial_state = False
     make_goal_state = False
-    make_compiled_domain = False
+    make_compiled_domain = True
     make_compiled_problem = False
+    make_files = True
     print_condition = True
-    fixADL = True
+    FixADL = True
     waitlist = ['on-table']
     agentslist = ['person1', 'person2']
 
@@ -1357,10 +1360,14 @@ if __name__ == "__main__":
     if make_compiled_domain:
         print '\n'*50
         print 'Parsing domain ...'
-        (dom,prob) = pddl.parseDomainAndProblem('../expfiles/drink-world2.pddl', '../expfiles/drink-prob2.pddl')
+        (dom,prob) = pddl.parseDomainAndProblem('../expfiles/drink/drink-world2.pddl', '../expfiles/drink/drink-prob2.pddl')
         print 'Parsing domain and problem complete.\n'
         print 'Compiling new domain ...\n'
-        c_domain = MakeDomain(dom, prob, agentslist, waitlist, print_condition)
+        c_domain = MakeDomain(dom, prob, agentslist, waitlist, FixADL, print_condition)
+        if make_files:
+            c_domain_file = open('c_domain_file_tmp.pddl','wb')
+            c_domain_file.write(c_domain.asPDDL())
+            c_domain_file.close()
     if make_compiled_problem:
         print '\n'*50
         print 'Parsing problem ...'
