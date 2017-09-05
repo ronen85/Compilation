@@ -39,7 +39,7 @@ def MakePredicates(dom, prob, waitlist = [], print_condition = False):
     predicates = []
     ## fin, isnt-fin, act, failure
     predicates.append(pddl.Predicate(u'fin', pddl.TypedArgList([pddl.TypedArg( u'?a', u'agent')])))
-    predicates.append(pddl.Predicate(u'isnt-fin', pddl.TypedArgList([pddl.TypedArg( u'?a', u'agent')])))
+    predicates.append(pddl.Predicate(u'isnt-fin', pddl.TypedArgList([pddl.TypedArg( u'?a', u'agent')]))) # upgrade to ADL support
     predicates.append(pddl.Predicate(u'act', pddl.TypedArgList([])))
     predicates.append(pddl.Predicate(u'failure', pddl.TypedArgList([])))
     ## local predicates
@@ -1312,12 +1312,18 @@ if __name__ == "__main__":
     make_compiled_domain = True
     make_compiled_problem = True
     make_files = True
-    print_condition = False
+    print_condition = True
     FixADL = True
-    waitlist = ['on-table']
-    agentslist = ['person1', 'person2']
-    domain_path = '../expfiles/drink/drink-world3.pddl'
-    problem_path = '../expfiles/drink/drink-prob3.pddl'
+
+    waitlist = []
+    agentslist = ['c1', 'c2']
+    domain_path = '../expfiles/crewplanning/p05-domain.pddl'
+    problem_path = '../expfiles/crewplanning/p05.pddl'
+
+    # waitlist = ['on-table']
+    # agentslist = ['person1', 'person2']
+    # domain_path = '../expfiles/drink/drink-world3.pddl'
+    # problem_path = '../expfiles/drink/drink-prob3.pddl'
     if parse:
         (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
     if make_preds:
