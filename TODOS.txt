@@ -1,0 +1,34 @@
+## TODOS ##
+
+? * add numeric support to code (in the initial state)
+
+? * add numeric support to code (in the initial state)
+
+* upgrade ADL handeling:
+  - 'isnt' will be added only in designated functions 
+
+* make a script that takes:
+	- path of domain
+	- path of problem
+	- agents list
+	- wait list
+	- ADL support need (True / False)
+	- path to compiled files.
+	- option (domain/problem/predicates/...)
+  and generates compiled domain.
+
+ISSUE: can't parse transport domain. problem with numeric fluents.
+
+XXX * compile transport domain and problem
+      the initial state contain numeric expressions
+vvv * try to find a good social law for drink-world
+VVV * fix the make action end f - there is no "-g" in predicate isnt-on-table
+VVV * fix make end action to include the goals needed.
+VVV * find why fin person 1 is unreachable.
+     - add "isnt-fin" to initial state. V
+VVV * add "make_files" to compilation
+    make_domain V
+    make_problem V
+VVV * make alias for 'optic'
+VVV * add feature to MakeDomain to fix ADL. [compilation]
+VVV * add reqs durative action
