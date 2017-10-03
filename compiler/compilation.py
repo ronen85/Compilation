@@ -1315,15 +1315,17 @@ if __name__ == "__main__":
     print_condition = True
     FixADL = True
 
-    waitlist = []
-    agentslist = ['c1', 'c2']
-    domain_path = '../expfiles/crewplanning/p05-domain.pddl'
-    problem_path = '../expfiles/crewplanning/p05.pddl'
+    # waitlist = []
+    # agentslist = ['c1', 'c2']
+    # domain_path = '../expfiles/crewplanning/p05-domain.pddl'
+    # problem_path = '../expfiles/crewplanning/p05.pddl'
 
-    # waitlist = ['on-table']
-    # agentslist = ['person1', 'person2']
-    # domain_path = '../expfiles/drink/drink-world3.pddl'
-    # problem_path = '../expfiles/drink/drink-prob3.pddl'
+    waitlist = ['on-table']
+    agentslist = ['person1', 'person2']
+    domain_path = '../expfiles/drink/drink-world3.pddl'
+    problem_path = '../expfiles/drink/drink-prob3.pddl'
+
+
     if parse:
         (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
     if make_preds:
