@@ -1,0 +1,6 @@
+## TRANSPORT PARSING / COMPILING GAPS ##
+
+- try to solve
+- try to parse
+- try to compile
+- try to find social law

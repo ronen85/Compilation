@@ -11,11 +11,39 @@ import pddlParser
 import itertools
 from copy import deepcopy
 
-def MakeName(dom, prob = None):
+class CompilationParameters(object):
+	"""	domain parameters to be compiled.
+		Attributes:
+		domain path: e.g '../expfiles/driverlog/domain.pddl'
+		problem_path e.g '../expfiles/driverlog/pfile1.pddl'
+		agentTypename e.g 'driver' or 'agent'
+		agentTypeparameter e.g 'driver' in ?driver or 'a' in ?a
+		waitlist, a list with the predicates to wait for when false.
+		 		  e.g on-table
+	"""
+	print_condition = False
+	fixADL = False
+
+	def __init__(self,domain_path, problem_path, agentTypename, agentTypeparameter, waitlist):
+		self.domain_path = domain_path
+		self.problem_path = problem_path
+		self.agentTypename = agentTypename
+		self.agentTypeparameter = agentTypeparameter
+		self.waitlist = waitlist
+
+
+def grabFileAsList(file_address):
+	new_list = []
+	with open(file_address) as f:
+		for line in f:
+			new_list.append(line.rstrip())
+	return new_list;
+
+def MakeName(dom, prob):
     name = 'c' + dom.name
     return name;
 
-def MakeReqs(dom, prob = None):
+def MakeReqs(dom, prob):
     reqs = deepcopy(dom.reqs)
     if not (u':fluents' in dom.reqs):
         reqs.append(u':fluents')
@@ -23,30 +51,33 @@ def MakeReqs(dom, prob = None):
         reqs.append(u':durative-actions')
     return reqs;
 
-def MakeTypes(dom, prob = None):
+def MakeTypes(dom, prob):
     types =  deepcopy(dom.types)
     return types;
 
-def MakeConstants(dom, prob = None):
-    if prob is not None:
-        constants = deepcopy(dom.constants)
-        constants.args.extend(deepcopy(prob.objects.args))
-    else:
-        constants = deepcopy(dom.constants)
-    return constants;
-
-def MakePredicates(dom, prob, waitlist = [], print_condition = False):
+def MakeConstants(dom, prob):
+	if prob is not None:
+		constants = deepcopy(dom.constants)
+		constants.args.extend(deepcopy(prob.objects.args))
+	else:
+		constants = deepcopy(dom.constants)
+	# print 'the constants are:\n', constants.asPDDL()
+	return constants;
+# params = CompilationParameters(domain_path, problem_path, agentTypename, agentTypeparameter, waitlist)
+# def MakePredicates(dom, prob, waitlist = [], print_condition = False, fixADL = True): # TODO: consider to remove 'isnt-fin'
+def MakePredicates(dom, prob, params): # TODO: consider to remove 'isnt-fin'
     predicates = []
     ## fin, isnt-fin, act, failure
-    predicates.append(pddl.Predicate(u'fin', pddl.TypedArgList([pddl.TypedArg( u'?a', u'agent')])))
-    predicates.append(pddl.Predicate(u'isnt-fin', pddl.TypedArgList([pddl.TypedArg( u'?a', u'agent')]))) # upgrade to ADL support
+    predicates.append(pddl.Predicate(u'fin', pddl.TypedArgList([pddl.TypedArg( '?'+params.agentTypeparameter, params.agentTypename)])))
+    if params.fixADL:
+		predicates.append(pddl.Predicate(u'isnt-fin', pddl.TypedArgList([pddl.TypedArg( params.agentTypeparameter, params.agentTypename)]))) # upgrade to ADL support
     predicates.append(pddl.Predicate(u'act', pddl.TypedArgList([])))
     predicates.append(pddl.Predicate(u'failure', pddl.TypedArgList([])))
     ## local predicates
     for pred in dom.predicates:
         temp = deepcopy(pred)
         temp.name = temp.name + '-l'
-        temp.args.args.insert(0, pddl.TypedArg(u'?alocal', u'agent'))
+        temp.args.args.insert(0, pddl.TypedArg(u'?alocal', params.agentTypename))
         predicates.append(temp)
     ## global predicates
     for pred in dom.predicates:
@@ -54,32 +85,34 @@ def MakePredicates(dom, prob, waitlist = [], print_condition = False):
         temp.name = temp.name + '-g'
         predicates.append(temp)
     ## checked predicates
-    for waitpred in waitlist:
+    for waitpred in params.waitlist:
         for pred in dom.predicates:
             if waitpred == pred.name:
                 temp = deepcopy(pred)
                 temp.name = temp.name + '-checked'
                 predicates.append(temp)
     ## waitfor predicates
-    for waitpred in waitlist:
+    for waitpred in params.waitlist:
         for pred in dom.predicates:
             if waitpred == pred.name:
                 temp = deepcopy(pred)
                 temp.name = temp.name + '-wt'
-                temp.args.args.insert(0, pddl.TypedArg(u'?alocal', u'agent'))
+                temp.args.args.insert(0, pddl.TypedArg(u'?alocal', params.agentTypename))
                 predicates.append(temp)
                 temp = deepcopy(pred)
                 temp.name = temp.name + '-not-wt'
-                temp.args.args.insert(0, pddl.TypedArg(u'?alocal', u'agent'))
+                temp.args.args.insert(0, pddl.TypedArg(u'?alocal', params.agentTypename))
                 predicates.append(temp)
-    if print_condition:
+    # if params.print_condition:
+    if True:
         print '\nthe predicates are :'
         for pred in predicates:
             print ' ', pred.asPDDL()
     return predicates;
 
-def GrabCond(type, action, waitlist = []):
-    if type == 'pref_start':
+def GrabCond(type, action, params):
+	waitlist = params.waitlist
+	if type == 'pref_start':
         pref_start = []
         for cond in action.get_cond('start', True):
             if cond.name not in waitlist:
@@ -144,41 +177,18 @@ def MakeCond(time, predName, predArgs = []):
     else:
         return;
 
-def MakeCond_test(time, predName, predArgs = [], isNotCond = False):
-    """ 9.10.2017 
-        time = 'start', 'end' ,'all'
-        predName = the name of the condition as string e.g 'act'
-        predArgs = list of the condition arguments e.g '['?a', '?c']'
-        isNotCond = true if user need a negative condition """
-    if len(predArgs) == 0: # the condition has no arguments
-        cond = pddl.TimedFormula(time,
-        pddl.Formula([pddl.Predicate(predName, pddl.TypedArgList([]))]))
-        # return cond;
-    elif isinstance(predArgs[0], str):
-        args = []
-        for arg in deepcopy(predArgs):
-            args.append(pddl.TypedArg(arg))
-        cond = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(predName, pddl.TypedArgList(args))]))
-        # return cond;
-    elif isinstance(predArgs[0], pddl.TypedArg):
-        argslist = deepcopy(predArgs)
-        cond = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(predName, pddl.TypedArgList(argslist))]))
-        # return cond;
-    if isNotCond:
-        negPredName = 'not( ' + predName
-        return;
-
 def MakeNotWaitConds(pred, agents):
-    waitconds = []
-    time = ['start', 'all', 'end']
-    name = pred.name + '-not-wt'
-    for t in time:
-        for a in deepcopy(agents):
-            args = [a] + pred.args.args
+	print 'the agents are: ', agents
+	waitconds = []
+	time = ['start', 'all', 'end']
+	name = pred.name + '-not-wt'
+	for t in time:
+		for a in deepcopy(agents):
+			args = [a] + pred.args.args
             # print 'time is: ', t, '  name is: ', name, '  args are: ', args
-            waitconds.append(MakeCond(t, name, args))
-    # print [w.asPDDL() for w in waitconds]
-    return waitconds;
+			waitconds.append(MakeCond(t, name, args))
+	print 'the waitconds are :',[w.asPDDL() for w in waitconds]
+	return waitconds;
 
 def MakeInvCond(time, pred):
     '''e.g time = 'start', pred = a predicate'''
@@ -212,28 +222,32 @@ def MakeInvEff(time, f, option, print_condition = False):
         if print_condition : print '\ninv eff is: ', eff.asPDDL(), '\n'
         return eff
 
-def MakeLocalCond(time, pred, op = None):
-    name = pred.name + '-l'
-    args = deepcopy(pred.args.args)
-    arglist = pddl.TypedArgList([pddl.TypedArg(u'?a')] + args)
-    if op == None:
-        localcond = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(name, arglist)]))
-    elif op == 'not':
-        localcond = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(name, args)], 'not'))
-    return localcond;
+def MakeLocalCond(time, pred, params, op = None):
+	agentTypeparameter = params.agentTypeparameter
+	name = pred.name + '-l'
+	args = deepcopy(pred.args.args)
+	TypedArgName = '?' + agentTypeparameter
+	arglist = pddl.TypedArgList([pddl.TypedArg(TypedArgName)] + args)
+	if op == None:
+		localcond = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(name, arglist)]))
+	elif op == 'not':
+		localcond = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(name, args)], 'not'))
+	return localcond;
 
-def MakeLocalEff(time, pred, positive = True):
-    """ time = 'start','all','end'
-        pred is a predicate
-        positive = true if Eff is a add effect, false otherwise """
-    name = pred.name + '-l'
-    args = deepcopy(pred.args.args)
-    arglist = pddl.TypedArgList([pddl.TypedArg(u'?a')] + args)
-    if positive:
-        localEff = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(name, arglist)]))
-    elif positive == False:
-        localEff = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(name, arglist)], u'not'))
-    return localEff
+def MakeLocalEff(time, pred, params, positive = True):
+	""" time = 'start','all','end'
+	pred is a predicate
+	positive = true if Eff is a add effect, false otherwise """
+	agentTypeparameter = params.agentTypeparameter
+	name = pred.name + '-l'
+	args = deepcopy(pred.args.args)
+	TypedArgName = '?'+ agentTypeparameter
+	arglist = pddl.TypedArgList([pddl.TypedArg(TypedArgName)] + args)
+	if positive:
+		localEff = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(name, arglist)]))
+	elif positive == False:
+		localEff = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(name, arglist)], u'not'))
+	return localEff
 
 def MakeGlobalEff(time, pred, positive = True):
     """ time = 'start','all','end'
@@ -258,23 +272,23 @@ def MakeGlobalCond(time, pred, op = None):
         globalcond = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(name, args)], 'not'))
     return globalcond;
 
-def GetAgents(constants):
+def GetAgents(constants, agentTypename = 'agent'): # TODO : make it possible to use other word than agent.
     agents = []
     for x in deepcopy(constants.args):
-        if x.arg_type == 'agent':
+        if x.arg_type == agentTypename:
             agents.append(x)
     # remove type indication (cosmetics)
     for i in range(len(agents)):
         agents[i].arg_type = None
     return agents;
 
-def MakeConds_s(action, constants, waitlist, print_condition = False):
+def MakeConds_s(action, constants, waitlist, agentTypename = 'agent', agentTypeparameter = 'a', print_condition = False):
     conds = []
     # grab basic conditions
-    pref_start = GrabCond('pref_start', action, waitlist)
-    prew_start = GrabCond('prew_start', action, waitlist)
-    pref_inv = GrabCond('pref_inv', action, waitlist)
-    pref_end = GrabCond('pref_inv', action, waitlist)
+    pref_start = GrabCond('pref_start', action, params)
+    prew_start = GrabCond('prew_start', action, params)
+    pref_inv = GrabCond('pref_inv', action, params)
+    pref_end = GrabCond('pref_end', action, params)
     # grab basic effects
     add_start = GrabEff('add_start', action)
     del_start = GrabEff('del_start', action)
@@ -283,84 +297,88 @@ def MakeConds_s(action, constants, waitlist, print_condition = False):
     # build pref_start conditions to action
     conds.append(MakeCond('start','act'))
     for f in pref_start:
-        conds.append(MakeLocalCond('start', f))
+        conds.append(MakeLocalCond('start',f, params))
         conds.append(MakeGlobalCond('start', f))
     for f in prew_start:
-        conds.append(MakeLocalCond('start', f))
+        conds.append(MakeLocalCond('start',f, params))
         conds.append(MakeGlobalCond('start', f))
     for f in del_start:
         conds.append(MakeInvCond('start', f))
     # build pref_inv conditions to action
     conds.append(MakeCond('all','act'))
     for f in pref_inv:
-        conds.append(MakeLocalCond('all', f))
+        conds.append(MakeLocalCond('all',f, params))
         conds.append(MakeGlobalCond('all', f))
     # build pref_end conditions to action
     conds.append(MakeCond('end','act'))
     for f in pref_end:
-        conds.append(MakeLocalCond('end', f))
+        conds.append(MakeLocalCond('end',f, params))
         conds.append(MakeGlobalCond('end', f))
     for f in del_end:
         conds.append(MakeInvCond('end', f))
     # build wait conds
     waitconds = []
-    agents = GetAgents(constants)
+    agents = GetAgents(constants, agentTypename)
     # print 'list of agents: ',[a.asPDDL() for a in agents]
     for f in add_start + add_end:
-        if f.name in waitlist:
+		if f.name in waitlist:
             # print f, ': ', f.asPDDL() , ' is in wait list'
-            waitconds = waitconds + MakeNotWaitConds(f, agents)
+			waitconds = waitconds + MakeNotWaitConds(f, agents)
     conds += waitconds
+    if print_condition:
+        print '\nthe conditions are:'
+        for cond in conds:
+            print cond.asPDDL()
     return conds
 
-def MakeActions_s(action, constants, waitlist, print_condition = False):
+def MakeActions_s(action, constants, waitlist, agentTypename = 'agent', agentTypeparameter = 'a', print_condition = False):
     name = action.name + '-s'
     parameters = deepcopy(action.parameters)
     duration_lb = action.duration_lb
     duration_ub = action.duration_ub
-    conds = MakeConds_s(action, constants, waitlist, print_condition)
-    effs = MakeEffs_s(action, constants, waitlist, print_condition)
+    conds = MakeConds_s(action, constants, waitlist, agentTypename, agentTypeparameter, print_condition)
+    effs = MakeEffs_s(action, constants, waitlist, agentTypeparameter, print_condition)
     action_s = pddl.DurativeAction(name, parameters, duration_lb, duration_ub, conds, effs)
     return action_s;
 
-def MakeEffs_s(action, constants, waitlist, print_condition = False):
+def MakeEffs_s(action, constants, waitlist, agentTypeparameter = 'a', print_condition = False):
     effs = []
     # grab basic conditions
-    pref_start = GrabCond('pref_start', action, waitlist)
-    prew_start = GrabCond('prew_start', action, waitlist)
-    pref_inv = GrabCond('pref_inv', action, waitlist)
-    pref_end = GrabCond('pref_inv', action, waitlist)
+    pref_start = GrabCond('pref_start', action, params)
+    prew_start = GrabCond('prew_start', action, params)
+    pref_inv = GrabCond('pref_inv', action, params)
+    pref_end = GrabCond('pref_end', action, params)
     # grab basic effects
     add_start = GrabEff('add_start', action)
     del_start = GrabEff('del_start', action)
     add_end = GrabEff('add_end', action)
     del_end = GrabEff('del_end', action)
-    if print_condition:
-        print '\nadd start effects are: ',[a.asPDDL() for a in add_start]
-        print 'del start effects are: ',[a.asPDDL() for a in del_start]
-        print 'add end effects are: ',[a.asPDDL() for a in add_end]
-        print 'del end effects are: ',[a.asPDDL() for a in del_end], '\n'
-        print '\npref_start conds are: ',[a.asPDDL() for a in pref_start]
-        print 'prew_start conds are: ',[a.asPDDL() for a in prew_start]
-        print 'pref_inv are: ',[a.asPDDL() for a in pref_inv]
-        print 'pref_end are: ',[a.asPDDL() for a in pref_end], '\n'
+    # if print_condition:
+    #     print '\nadd start effects are: ',[a.asPDDL() for a in add_start]
+    #     print 'del start effects are: ',[a.asPDDL() for a in del_start]
+    #     print 'add end effects are: ',[a.asPDDL() for a in add_end]
+    #     print 'del end effects are: ',[a.asPDDL() for a in del_end], '\n'
+    #     print '\npref_start conds are: ',[a.asPDDL() for a in pref_start]
+    #     print 'prew_start conds are: ',[a.asPDDL() for a in prew_start]
+    #     print 'pref_inv are: ',[a.asPDDL() for a in pref_inv]
+    #     print 'pref_end are: ',[a.asPDDL() for a in pref_end], '\n'
     ## add start effects
     for f in add_start: # f_i, f_g | f E add_start(a)
-        effs.append(MakeLocalEff(u'start', f, True))
+        effs.append(MakeLocalEff(u'start', f, params, True))
         effs.append(MakeGlobalEff(u'start', f, True))
     for f in pref_inv: # f-inv ++ | f E pre_inv(a)
         effs.append(MakeInvEff(u'start', f, 'increase'))
     ## del start effects
     for f in del_start:
-        effs.append(MakeLocalEff(u'start', f, False))
+        effs.append(MakeLocalEff(u'start', f, params, False))
         effs.append(MakeGlobalEff(u'start', f, False))
     ## add end effects
     for f in add_end: # f_i, f_g | f E add_end(a)
-        effs.append(MakeLocalEff(u'end', f, True))
+        effs.append(MakeLocalEff(u'end', f, params, True))
         effs.append(MakeGlobalEff(u'end', f, True))
     ## del end effects
     for f in del_end: # f_i, f_g | f E del_end(a)
-        effs.append(MakeLocalEff(u'end', f, False))
+        effs.append(MakeLocalEff(u'end', f, params, False))
         effs.append(MakeGlobalEff(u'end', f, False))
     for f in pref_inv:
         effs.append(MakeInvEff(u'end', f, 'decrease'))
@@ -376,7 +394,7 @@ def MakeEffs_s(action, constants, waitlist, print_condition = False):
     return effs;
 
 def MakeActions_fstart(action, constants, waitlist, print_condition = False):
-    pref_start = GrabCond('pref_start', action, waitlist)
+    pref_start = GrabCond('pref_start', action, params)
     Actions_fstart = []
     for i in range(len(pref_start)):
     # for i in range(2): # for test only
@@ -385,7 +403,7 @@ def MakeActions_fstart(action, constants, waitlist, print_condition = False):
     return Actions_fstart;
 
 def MakeAction_fstart_i(action, constants, waitlist, i, print_condition = False):
-    pref_start = GrabCond('pref_start', action, waitlist)
+    pref_start = GrabCond('pref_start', action, params)
     name = action.name + '-f-start-' + str(i+1)
     parameters = deepcopy(action.parameters)
     duration_lb = action.duration_lb
@@ -398,13 +416,13 @@ def MakeAction_fstart_i(action, constants, waitlist, i, print_condition = False)
     Action_fstart_i = pddl.DurativeAction(name, parameters, duration_lb, duration_ub, conds, effs)
     return Action_fstart_i;
 
-def MakeEffs_fstart(action, constants, waitlist, print_condition = False):
+def MakeEffs_fstart(action, constants, waitlist, agentTypeparameter = 'a', print_condition = False):
     effs = []
     # grab basic conditions
-    pref_start = GrabCond('pref_start', action, waitlist)
-    prew_start = GrabCond('prew_start', action, waitlist)
-    pref_inv = GrabCond('pref_inv', action, waitlist)
-    pref_end = GrabCond('pref_inv', action, waitlist)
+    pref_start = GrabCond('pref_start', action, params)
+    prew_start = GrabCond('prew_start', action, params)
+    pref_inv = GrabCond('pref_inv', action, params)
+    pref_end = GrabCond('pref_end', action, params)
     # grab basic effects
     add_start = GrabEff('add_start', action)
     del_start = GrabEff('del_start', action)
@@ -422,16 +440,16 @@ def MakeEffs_fstart(action, constants, waitlist, print_condition = False):
     # add start effects
     effs.append(MakeEff(u'start', u'failure', [])) ## {failure}
     for f in add_start: ## {f_i V f e add_start(a)}
-        effs.append(MakeLocalEff(u'start', f, True))
+        effs.append(MakeLocalEff(u'start', f,  params,True))
     # del_start effects
     for f in del_start: ## {f_i V f e del_start(a)}
-        effs.append(MakeLocalEff(u'start', f, False))
+        effs.append(MakeLocalEff(u'start', f, params, False))
     # add_end effects
     for f in add_end: ## {f_i V f e add_end(a)}
-        effs.append(MakeLocalEff(u'end', f, True))
+        effs.append(MakeLocalEff(u'end', f, params, True))
     # del_end
     for f in del_end: ## {f_i V f e del_end(a)}
-        effs.append(MakeLocalEff(u'end', f, False))
+        effs.append(MakeLocalEff(u'end', f, params, False))
     # print effects
     if print_condition:
         if len(effs) == 0:
@@ -458,13 +476,13 @@ def MakeEff(time, effName, effdArgs = []):
     eff = pddl.TimedFormula(time, formula)
     return eff
 
-def MakeConds_fstart(action, constants, waitlist, i, print_condition = False):
+def MakeConds_fstart(action, constants, waitlist, i, agentTypeparameter = 'a', print_condition = False):
     conds = []
     # grab basic conditions
     pref_start = GrabCond('pref_start', action, waitlist)
     prew_start = GrabCond('prew_start', action, waitlist)
     pref_inv = GrabCond('pref_inv', action, waitlist)
-    pref_end = GrabCond('pref_inv', action, waitlist)
+    pref_end = GrabCond('pref_end', action, waitlist)
     # grab basic effects
     add_start = GrabEff('add_start', action)
     del_start = GrabEff('del_start', action)
@@ -482,20 +500,20 @@ def MakeConds_fstart(action, constants, waitlist, i, print_condition = False):
     # build pref_start conditions to action
     conds.append(MakeCond('start','act'))
     for f in prew_start:
-        conds.append(MakeLocalCond('start', f))
+        conds.append(MakeLocalCond('start', f, params))
         conds.append(MakeGlobalCond('start', f))
     for f in pref_start:
-        conds.append(MakeLocalCond('start', f))
+        conds.append(MakeLocalCond('start', f, params))
     if print_condition: print '\nf to be inverted is: ', pref_start[i].name , '-g'
     conds.append(MakeGlobalCond('start', pref_start[i], 'not'))
     # build pref_inv conditions to action
     conds.append(MakeCond('all','act'))
     for f in pref_inv:
-        conds.append(MakeLocalCond('all', f))
+        conds.append(MakeLocalCond('all',f, params))
     # build pref_end conditions to action
     conds.append(MakeCond('end','act'))
     for f in pref_end:
-        conds.append(MakeLocalCond('end', f))
+        conds.append(MakeLocalCond('end', f, params))
     # print list of conds
     if print_condition:
         print '\nthe conditions are:'
@@ -525,7 +543,7 @@ def FixADLConds(conds, print_condition = False):
     return fixedconds;
 
 def MakeActions_fend(action, constants, waitlist, print_condition):
-    pref_end = GrabCond('pref_end', action, waitlist)
+    pref_end = GrabCond('pref_end', action, params)
     Actions_fend = []
     for i in range(len(pref_end)):
         Action_fend_i = MakeAction_fend_i(action, constants, waitlist, i, print_condition)
@@ -533,7 +551,7 @@ def MakeActions_fend(action, constants, waitlist, print_condition):
     return Actions_fend;
 
 def MakeAction_fend_i(action, constants, waitlist, i, print_condition):
-    pref_end = GrabCond('pref_start', action, waitlist)
+    pref_end = GrabCond('pref_start', action, params)
     name = action.name + '-f-end-' + str(i+1)
     parameters = deepcopy(action.parameters)
     duration_lb = action.duration_lb
@@ -546,13 +564,13 @@ def MakeAction_fend_i(action, constants, waitlist, i, print_condition):
     Action_fend_i = pddl.DurativeAction(name, parameters, duration_lb, duration_ub, conds, effs)
     return Action_fend_i;
 
-def MakeEffs_fend(action, constants, waitlist, print_condition):
+def MakeEffs_fend(action, constants, waitlist, agentTypeparameter = 'a', print_condition = False):
     effs = []
     # grab basic conditions
-    pref_start = GrabCond('pref_start', action, waitlist)
-    prew_start = GrabCond('prew_start', action, waitlist)
-    pref_inv = GrabCond('pref_inv', action, waitlist)
-    pref_end = GrabCond('pref_inv', action, waitlist)
+    pref_start = GrabCond('pref_start', action, params)
+    prew_start = GrabCond('prew_start', action, params)
+    pref_inv = GrabCond('pref_inv', action, params)
+    pref_end = GrabCond('pref_end', action, params)
     # grab basic effects
     add_start = GrabEff('add_start', action)
     del_start = GrabEff('del_start', action)
@@ -570,19 +588,19 @@ def MakeEffs_fend(action, constants, waitlist, print_condition):
 
     # add start effects
     for f in add_start: ## {f_i, f_g V f e add_start(a)}
-        effs.append(MakeLocalEff(u'start', f, True))
+        effs.append(MakeLocalEff(u'start', f, params, True))
         effs.append(MakeGlobalEff(u'start', f, True))
     # del_start effects
     for f in del_start: ## {f_i, f_g V f e add_del(a)}
-        effs.append(MakeLocalEff(u'start', f, False))
+        effs.append(MakeLocalEff(u'start', f, params, False))
         effs.append(MakeGlobalEff(u'start', f, False))
     # add_end effects
     for f in add_end:
-        effs.append(MakeLocalEff(u'end', f, True)) ## {f_i V f e add_end(a)}
+        effs.append(MakeLocalEff(u'end', f, params, True)) ## {f_i V f e add_end(a)}
     effs.append(MakeEff(u'end', u'failure', [])) ## {failure}
     # del_end
     for f in del_end: ## {f_i V f e del_end(a)}
-        effs.append(MakeLocalEff(u'end', f, False))
+        effs.append(MakeLocalEff(u'end', f, params, False))
     # print effects
     if print_condition:
         if len(effs) == 0:
@@ -593,13 +611,13 @@ def MakeEffs_fend(action, constants, waitlist, print_condition):
                 print ' ',eff.asPDDL()
     return effs;
 
-def MakeConds_fend(action, constants, waitlist, i, print_condition):
+def MakeConds_fend(action, constants, waitlist, i, agentTypeparameter = 'a', print_condition = False):
     conds = []
     # grab basic conditions
     pref_start = GrabCond('pref_start', action, waitlist)
     prew_start = GrabCond('prew_start', action, waitlist)
     pref_inv = GrabCond('pref_inv', action, waitlist)
-    pref_end = GrabCond('pref_inv', action, waitlist)
+    pref_end = GrabCond('pref_end', action, waitlist)
     # grab basic effects
     add_start = GrabEff('add_start', action)
     del_start = GrabEff('del_start', action)
@@ -617,20 +635,20 @@ def MakeConds_fend(action, constants, waitlist, i, print_condition):
     # build pref_start conditions to action
     conds.append(MakeCond('start','act')) ## {act}
     for f in pref_start: ## {f_i, f_g V f e pref_start(a)}
-        conds.append(MakeLocalCond('start', f))
+        conds.append(MakeLocalCond('start', f, params))
         conds.append(MakeGlobalCond('start', f))
     for f in prew_start: ## {f_i, f_g V f e prew_start(a)}
-        conds.append(MakeLocalCond('start', f))
+        conds.append(MakeLocalCond('start', f, params))
         conds.append(MakeGlobalCond('start', f))
     # build pref_inv conditions to action
     conds.append(MakeCond('all','act')) ## {act}
     for f in pref_inv: ## {f_i, f_g V f e pref_inv(a)}
-        conds.append(MakeLocalCond('all', f))
+        conds.append(MakeLocalCond('all', f, params))
         conds.append(MakeGlobalCond('all', f))
     # build pref_end conditions to action
     conds.append(MakeCond('end','act')) ## {act}
     for f in pref_end: ## {f_i V f e pref_end(a)}
-        conds.append(MakeLocalCond('end', f))
+        conds.append(MakeLocalCond('end', f, params))
     ## {not f_g(i) V f e pref_end(a)}
     if print_condition: print 'f to be inverted is: ', pref_end[i].name , '-g'
     conds.append(MakeGlobalCond('end', pref_start[i], 'not'))
@@ -670,13 +688,13 @@ def MakeAction_finv_start(action, constants, waitlist, print_condition):
     action_finv_start = pddl.DurativeAction(name, parameters, duration_lb, duration_ub, conds, effs)
     return action_finv_start;
 
-def MakeConds_finv_start(action, constants, waitlist, print_condition):
+def MakeConds_finv_start(action, constants, waitlist, agentTypeparameter = 'a', print_condition = False):
     conds = []
     # grab basic conditions
-    pref_start = GrabCond('pref_start', action, waitlist)
-    prew_start = GrabCond('prew_start', action, waitlist)
-    pref_inv = GrabCond('pref_inv', action, waitlist)
-    pref_end = GrabCond('pref_inv', action, waitlist)
+    pref_start = GrabCond('pref_start', action, params)
+    prew_start = GrabCond('prew_start', action, params)
+    pref_inv = GrabCond('pref_inv', action, params)
+    pref_end = GrabCond('pref_end', action, params)
     # grab basic effects
     add_start = GrabEff('add_start', action)
     del_start = GrabEff('del_start', action)
@@ -686,11 +704,11 @@ def MakeConds_finv_start(action, constants, waitlist, print_condition):
     conds.append(MakeCond('start','act')) ## {act}
     ## {f_i, f_g V pref_start}
     for f in pref_start:
-        conds.append(MakeLocalCond('start', f))
+        conds.append(MakeLocalCond('start', f, params))
         conds.append(MakeGlobalCond('start', f))
     ## {f_i, f_g V prew_start}
     for f in prew_start:
-        conds.append(MakeLocalCond('start', f))
+        conds.append(MakeLocalCond('start', f, params))
         conds.append(MakeGlobalCond('start', f))
     ## {sum(f_inv) > 0 V f e del(a)}
     conds.append(MakefinvSumCond(del_start, 'start'))
@@ -699,26 +717,26 @@ def MakeConds_finv_start(action, constants, waitlist, print_condition):
     conds.append(MakeCond('all','act'))
     ## {f_i V f e pref_inv}
     for f in pref_inv:
-        conds.append(MakeLocalCond('all', f))
+        conds.append(MakeLocalCond('all', f, params))
     # build pref_end conditions to action
     ## {act}
     conds.append(MakeCond('end','act'))
     ## {f_i V f e pref_end}
     for f in pref_end:
-        conds.append(MakeLocalCond('end', f))
+        conds.append(MakeLocalCond('end', f, params))
     if print_condition:
         print '\nthe following conditions were composed:'
         for cond in conds:
             print ' ', cond.asPDDL()
     return conds;
 
-def MakeEffs_finv_start(action, constants, waitlist, print_condition):
+def MakeEffs_finv_start(action, constants, waitlist, agentTypeparameter = 'a', print_condition = False):
     effs = []
     # grab basic conditions
-    pref_start = GrabCond('pref_start', action, waitlist)
-    prew_start = GrabCond('prew_start', action, waitlist)
-    pref_inv = GrabCond('pref_inv', action, waitlist)
-    pref_end = GrabCond('pref_inv', action, waitlist)
+    pref_start = GrabCond('pref_start', action, params)
+    prew_start = GrabCond('prew_start', action, params)
+    pref_inv = GrabCond('pref_inv', action, params)
+    pref_end = GrabCond('pref_end', action, params)
     # grab basic effects
     add_start = GrabEff('add_start', action)
     del_start = GrabEff('del_start', action)
@@ -726,17 +744,17 @@ def MakeEffs_finv_start(action, constants, waitlist, print_condition):
     del_end = GrabEff('del_end', action)
     ## add start effects
     for f in add_start: # {f_i V f e add_start}
-        effs.append(MakeLocalEff(u'start', f, True))
+        effs.append(MakeLocalEff(u'start', f, params, True))
     effs.append(MakeEff(u'start', u'failure', [])) # {failure}
     ## del start effects
     for f in del_start: # {f_i V f e del_start}
-        effs.append(MakeLocalEff(u'start', f, False))
+        effs.append(MakeLocalEff(u'start', f, params, False))
     ## add end effects
     for f in add_end: # {f_i V f e add_end}
-        effs.append(MakeLocalEff(u'end', f, True))
+        effs.append(MakeLocalEff(u'end', f, params, True))
     ## del end effects
     for f in del_end: # {f_i V f e del_end}
-        effs.append(MakeLocalEff(u'end', f, False))
+        effs.append(MakeLocalEff(u'end', f, params, False))
     # print effects
     if print_condition:
         if len(effs) == 0:
@@ -764,13 +782,13 @@ def MakeAction_finv_end(action, constants, waitlist, print_condition):
     action_finv_start = pddl.DurativeAction(name, parameters, duration_lb, duration_ub, conds, effs)
     return action_finv_start;
 
-def MakeConds_finv_end(action, constants, waitlist, print_condition):
+def MakeConds_finv_end(action, constants, waitlist,  agentTypeparameter = 'a', print_condition = False):
     conds = []
     # grab basic conditions
     pref_start = GrabCond('pref_start', action, waitlist)
     prew_start = GrabCond('prew_start', action, waitlist)
     pref_inv = GrabCond('pref_inv', action, waitlist)
-    pref_end = GrabCond('pref_inv', action, waitlist)
+    pref_end = GrabCond('pref_end', action, waitlist)
     # grab basic effects
     add_start = GrabEff('add_start', action)
     del_start = GrabEff('del_start', action)
@@ -779,22 +797,22 @@ def MakeConds_finv_end(action, constants, waitlist, print_condition):
     # build pref_start conditions to action
     conds.append(MakeCond('start','act')) ## {act}
     for f in pref_start:
-        conds.append(MakeLocalCond('start', f))
+        conds.append(MakeLocalCond('start', f, params))
         conds.append(MakeGlobalCond('start', f))  ## {f_i, f_g V f e pref_start}
     for f in prew_start:
-        conds.append(MakeLocalCond('start', f))
+        conds.append(MakeLocalCond('start', f, params))
         conds.append(MakeGlobalCond('start', f))  ## {f_i, f_g V f e prew_start}
     for f in del_start:
         conds.append(MakeInvCond('start', f))  ## {f_inv = 0 V f e del_start}
     # build pref_inv conditions to action
     conds.append(MakeCond('all','act'))  ## {act}
     for f in pref_inv:
-        conds.append(MakeLocalCond('all', f))
+        conds.append(MakeLocalCond('all', f, params))
         conds.append(MakeGlobalCond('all', f))  ## {f_i, f_g V f e pref_inv}
     # build pref_end conditions to action
     conds.append(MakeCond('end','act'))  ## {act}
     for f in pref_end:
-        conds.append(MakeLocalCond('end', f))
+        conds.append(MakeLocalCond('end', f, params))
         conds.append(MakeGlobalCond('end', f))  ## {f_i, f_g V f e pref_inv}
     conds.append(MakefinvSumCond(del_end, 'end'))  ## {sum of f_inv V f e del_end > 0}
     # print effects
@@ -804,13 +822,13 @@ def MakeConds_finv_end(action, constants, waitlist, print_condition):
             print ' ', f.asPDDL()
     return conds;
 
-def MakeEffs_finv_end(action, constants, waitlist, print_condition):
+def MakeEffs_finv_end(action, constants, waitlist, agentTypeparameter = 'a', print_condition = False):
     effs = []
     # grab basic conditions
-    pref_start = GrabCond('pref_start', action, waitlist)
-    prew_start = GrabCond('prew_start', action, waitlist)
-    pref_inv = GrabCond('pref_inv', action, waitlist)
-    pref_end = GrabCond('pref_inv', action, waitlist)
+    pref_start = GrabCond('pref_start', action, params)
+    prew_start = GrabCond('prew_start', action, params)
+    pref_inv = GrabCond('pref_inv', action, params)
+    pref_end = GrabCond('pref_end', action, params)
     # grab basic effects
     add_start = GrabEff('add_start', action)
     del_start = GrabEff('del_start', action)
@@ -818,21 +836,21 @@ def MakeEffs_finv_end(action, constants, waitlist, print_condition):
     del_end = GrabEff('del_end', action)
     ## add start effects
     for f in add_start:
-        effs.append(MakeLocalEff(u'start', f, True))
+        effs.append(MakeLocalEff(u'start', f, params, True))
         effs.append(MakeGlobalEff(u'start', f, True))  ## {f_i, f_g V f e add_start}
     for f in pref_inv:
         effs.append(MakeInvEff(u'start', f, 'increase'))  ## {f_inv ++ V f e pre_inv}
     ## del start effects
     for f in del_start:
-        effs.append(MakeLocalEff(u'start', f, False))
+        effs.append(MakeLocalEff(u'start', f, params, False))
         effs.append(MakeGlobalEff(u'start', f, False))  ## {f_i, f_g V f e del_start}
     ## add end effects
     for f in add_end:
-        effs.append(MakeLocalEff(u'end', f, True))  ## {f_i V f e add_end}
+        effs.append(MakeLocalEff(u'end', f, params, True))  ## {f_i V f e add_end}
     effs.append(MakeEff(u'end', u'failure', []))  ## {failure}
     ## del end effects
     for f in del_end:
-        effs.append(MakeLocalEff(u'end', f, False))  ## {f_i V f e del_end}
+        effs.append(MakeLocalEff(u'end', f, params, False))  ## {f_i V f e del_end}
     # print effects
     if print_condition:
         if len(effs) == 0:
@@ -868,7 +886,7 @@ def MakefinvSumCond(predlist, time):
         return sumCond
 
 def MakeActions_Wait(action, constants, waitlist, print_condition):
-    prew_start = GrabCond('prew_start', action, waitlist)
+    prew_start = GrabCond('prew_start', action, params)
     if len(prew_start) == 0:
         if print_condition: print 'there are no prew_start conds'
         return [];
@@ -885,13 +903,13 @@ def MakeActions_Wait(action, constants, waitlist, print_condition):
         actions_wait.append(action_wait)
     return actions_wait;
 
-def MakeConds_wait(action, waitcond, waitlist, print_condition):
+def MakeConds_wait(action, waitcond, waitlist, agentTypeparameter = 'a', print_condition = False):
     conds = []
     # grab basic conditions
-    pref_start = GrabCond('pref_start', action, waitlist)
-    prew_start = GrabCond('prew_start', action, waitlist)
-    pref_inv = GrabCond('pref_inv', action, waitlist)
-    pref_end = GrabCond('pref_inv', action, waitlist)
+    pref_start = GrabCond('pref_start', action, params)
+    prew_start = GrabCond('prew_start', action, params)
+    pref_inv = GrabCond('pref_inv', action, params)
+    pref_end = GrabCond('pref_end', action, params)
     # grab basic effects
     add_start = GrabEff('add_start', action)
     del_start = GrabEff('del_start', action)
@@ -900,18 +918,18 @@ def MakeConds_wait(action, waitcond, waitlist, print_condition):
     # build pref_start conditions to action
     conds.append(MakeCond('start','act')) ## {act}
     for f in pref_start:
-        conds.append(MakeLocalCond('start', f)) ## {f_i V f e pref_start}
+        conds.append(MakeLocalCond('start', f, params)) ## {f_i V f e pref_start}
     for f in prew_start:
-        conds.append(MakeLocalCond('start', f)) ## {f_i V f e prew_start}
+        conds.append(MakeLocalCond('start', f, params)) ## {f_i V f e prew_start}
     conds.append(MakeGlobalCond('start', waitcond, 'not')) ## {not f_g V f e prew_start}
     # build pref_inv conditions to action
     conds.append(MakeCond('all','act')) ## {act}
     for f in pref_inv:
-        conds.append(MakeLocalCond('all', f)) ## {f_i V f e pref_inv}
+        conds.append(MakeLocalCond('all', f, params)) ## {f_i V f e pref_inv}
     # build pref_end conditions to action
     conds.append(MakeCond('end','act')) ## {act}
     for f in pref_end:
-        conds.append(MakeLocalCond('end', f)) ## {f_i  V f e pref_inv}
+        conds.append(MakeLocalCond('end', f, params)) ## {f_i  V f e pref_inv}
     # print effects
     if print_condition:
         print '\nthe conditions are:'
@@ -934,13 +952,13 @@ def MakeWaitEffect(waitcond, time = 'start', positive = True):
     wtEff = deepcopy(pddl.TimedFormula(time, formula))
     return wtEff;
 
-def MakeEffs_wait(action, waitcond, constants, waitlist, print_condition):
+def MakeEffs_wait(action, waitcond, constants, waitlist, agentTypeparameter = 'a', print_condition = False):
     effs = []
     # grab basic conditions
-    pref_start = GrabCond('pref_start', action, waitlist)
-    prew_start = GrabCond('prew_start', action, waitlist)
-    pref_inv = GrabCond('pref_inv', action, waitlist)
-    pref_end = GrabCond('pref_inv', action, waitlist)
+    pref_start = GrabCond('pref_start', action, params)
+    prew_start = GrabCond('prew_start', action, params)
+    pref_inv = GrabCond('pref_inv', action, params)
+    pref_end = GrabCond('pref_end', action, params)
     # grab basic effects
     add_start = GrabEff('add_start', action)
     del_start = GrabEff('del_start', action)
@@ -949,21 +967,21 @@ def MakeEffs_wait(action, waitcond, constants, waitlist, print_condition):
     # add start effects
     effs.append(MakeEff(u'start', u'failure', [])) ## {failure}
     for f in add_start:
-        effs.append(MakeLocalEff(u'start', f, True))    ##{f_i V f e add_start}
+        effs.append(MakeLocalEff(u'start', f, params, True))    ##{f_i V f e add_start}
     # {f-wt}
     effs.append(MakeWaitEffect(waitcond, 'start', True))
     # del_start effects
     for f in del_start: # {f_i V f e del_start}
-        effs.append(MakeLocalEff(u'start', f, False))
+        effs.append(MakeLocalEff(u'start', f, params, False))
     # { f-not-wt }
     effs.append(MakeWaitEffect(waitcond, 'start', False))
     # add_end effects
     for f in add_end: ## {f_i V f e add_end(a)}
-        effs.append(MakeLocalEff(u'end', f, True))
+        effs.append(MakeLocalEff(u'end', f, params, True))
 
     # del_end effects
     for f in del_end: ## {f_i V f e del_end(a)}
-        effs.append(MakeLocalEff(u'end', f, False))
+        effs.append(MakeLocalEff(u'end', f, params, False))
     # print effects
     if print_condition:
         if len(effs) == 0:
@@ -1151,7 +1169,7 @@ def MakeActions_end_f(agentslist, dom, prob, print_condition = False):
             print '\nthe (', i+1 ,') action is: \n', end_f_actions[i].asPDDL()
     return end_f_actions;
 
-def MakeDomain(dom, prob, agentslist, waitlist, FixADL = False, print_condition = False): #TODO: add FixADL argument
+def MakeDomain(dom, prob, agentTypename, waitlist, FixADL = False, print_condition = False): #TODO: add FixADL argument
     name = 'c' + dom.name
     if print_condition:
         print ' the name of the new domain is:\n  ', name
@@ -1183,7 +1201,7 @@ def MakeDomain(dom, prob, agentslist, waitlist, FixADL = False, print_condition 
             print '  ', act.name
     durative_actions = []
     for dact in dom.durative_actions: # a_s
-        durative_actions.append(MakeActions_s(dact, constants, waitlist, False))
+        durative_actions.append(MakeActions_s(dact, constants, waitlist, agentTypename, False))
     # a_f_start = []
     for dact in dom.durative_actions: # a_f_start
         durative_actions += MakeActions_fstart(dact, constants, waitlist, False)
@@ -1319,6 +1337,7 @@ def MakeProblem(dom, prob, agentslist, waitlist, print_condition = False):
 if __name__ == "__main__":
     print '\n'*100
     parse = True
+    get_agents = True
     make_preds = False
     make_funcs = False
     make_consts = False
@@ -1338,21 +1357,36 @@ if __name__ == "__main__":
     make_files = False
     print_condition = True
     FixADL = False
-    test1 = True
 
-    # waitlist = []
-    # agentslist = ['c1', 'c2']
-    # domain_path = '../expfiles/crewplanning/p05-domain.pddl'
-    # problem_path = '../expfiles/crewplanning/p05.pddl'
+    loadDrink = False
+    loadDriver = True
 
-    waitlist = ['on-table']
-    agentslist = ['person1', 'person2']
-    domain_path = '../expfiles/drink/drink-world3.pddl'
-    problem_path = '../expfiles/drink/drink-prob3.pddl'
+    if loadDrink:
+        print 'drink problem is loaded.'
+        waitlist = ['on-table']
+        agentslist = ['person1', 'person2']
+        agentTypename = 'agent'
+        domain_path = '../expfiles/drink/drink-world3.pddl'
+        problem_path = '../expfiles/drink/drink-prob3.pddl'
+    elif loadDriver:
+        print 'driver problem is loaded'
+        waitlist = []
+        agentslist = ['d0', 'd1']
+        agentTypename = 'driver'
+        domain_path =  '../expfiles/driverlog/domain.pddl'
+        problem_path = '../expfiles/driverlog/pfile1.pddl'
+    else:
+        print 'no problem is loaded ...'
+        exit()
+
+
 
     if parse:
         (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
-    if test1:
+    if get_agents:
+        print 'get_agents is True'
+        constants = MakeConstants(dom, prob)
+        agents = GetAgents(constants, agentTypename)
 
     if make_preds:
         preds = MakePredicates(dom, prob, waitlist, print_condition)
@@ -1385,7 +1419,9 @@ if __name__ == "__main__":
                 for cond in action.cond:
                     print ' ',cond.asPDDL()
     if make_action_s:
-        action_s = MakeActions_s(action, constants, waitlist, print_condition = True)
+        action = dom.durative_actions[0]
+        constants = MakeConstants(dom, prob)
+        action_s = MakeActions_s(action, constants, waitlist, agentTypename, print_condition = True)
     if make_action_finv_start:
         action = dom.durative_actions[0]
         actions_finv_start = MakeAction_finv_start(action, constants, waitlist, print_condition)
@@ -1416,7 +1452,7 @@ if __name__ == "__main__":
         (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
         print 'Parsing domain and problem complete.\n'
         print 'Compiling new domain ...\n'
-        c_domain = MakeDomain(dom, prob, agentslist, waitlist, FixADL, print_condition)
+        c_domain = MakeDomain(dom, prob, agentTypename, waitlist, FixADL, print_condition)
         if make_files:
             c_domain_file = open('c_domain_file_tmp.pddl','wb')
             c_domain_file.write(c_domain.asPDDL())

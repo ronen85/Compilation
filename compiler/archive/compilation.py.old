@@ -144,30 +144,6 @@ def MakeCond(time, predName, predArgs = []):
     else:
         return;
 
-def MakeCond_test(time, predName, predArgs = [], isNotCond = False):
-    """ 9.10.2017 
-        time = 'start', 'end' ,'all'
-        predName = the name of the condition as string e.g 'act'
-        predArgs = list of the condition arguments e.g '['?a', '?c']'
-        isNotCond = true if user need a negative condition """
-    if len(predArgs) == 0: # the condition has no arguments
-        cond = pddl.TimedFormula(time,
-        pddl.Formula([pddl.Predicate(predName, pddl.TypedArgList([]))]))
-        # return cond;
-    elif isinstance(predArgs[0], str):
-        args = []
-        for arg in deepcopy(predArgs):
-            args.append(pddl.TypedArg(arg))
-        cond = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(predName, pddl.TypedArgList(args))]))
-        # return cond;
-    elif isinstance(predArgs[0], pddl.TypedArg):
-        argslist = deepcopy(predArgs)
-        cond = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(predName, pddl.TypedArgList(argslist))]))
-        # return cond;
-    if isNotCond:
-        negPredName = 'not( ' + predName
-        return;
-
 def MakeNotWaitConds(pred, agents):
     waitconds = []
     time = ['start', 'all', 'end']
@@ -658,7 +634,7 @@ def MakeFunctions(dom, prob, waitlist = [], print_condition = False):
 def MakeAction_finv_start(action, constants, waitlist, print_condition):
     del_start = GrabEff('del_start', action)
     if len(del_start) == 0:
-        if print_condition: print 'del_start is empty'
+        print 'del_start is empty'
         return None;
     if print_condition: print '\n'*5
     name = action.name + '-f-inv-start'
@@ -1333,12 +1309,11 @@ if __name__ == "__main__":
     grab_goals = False
     make_initial_state = False
     make_goal_state = False
-    make_compiled_domain = False
-    make_compiled_problem = False
-    make_files = False
+    make_compiled_domain = True
+    make_compiled_problem = True
+    make_files = True
     print_condition = True
-    FixADL = False
-    test1 = True
+    FixADL = True
 
     # waitlist = []
     # agentslist = ['c1', 'c2']
@@ -1350,10 +1325,9 @@ if __name__ == "__main__":
     domain_path = '../expfiles/drink/drink-world3.pddl'
     problem_path = '../expfiles/drink/drink-prob3.pddl'
 
+
     if parse:
         (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
-    if test1:
-
     if make_preds:
         preds = MakePredicates(dom, prob, waitlist, print_condition)
     if make_funcs:

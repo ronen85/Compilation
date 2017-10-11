@@ -12,7 +12,7 @@ import itertools
 from copy import deepcopy
 
 def MakeName(dom, prob = None):
-    name = 'c' + dom.name
+    name = 'c' + dom.name + '-adl' # update adl
     return name;
 
 def MakeReqs(dom, prob = None):
@@ -37,9 +37,8 @@ def MakeConstants(dom, prob = None):
 
 def MakePredicates(dom, prob, waitlist = [], print_condition = False):
     predicates = []
-    ## fin, isnt-fin, act, failure
+    ## fin, act, failure
     predicates.append(pddl.Predicate(u'fin', pddl.TypedArgList([pddl.TypedArg( u'?a', u'agent')])))
-    predicates.append(pddl.Predicate(u'isnt-fin', pddl.TypedArgList([pddl.TypedArg( u'?a', u'agent')]))) # upgrade to ADL support
     predicates.append(pddl.Predicate(u'act', pddl.TypedArgList([])))
     predicates.append(pddl.Predicate(u'failure', pddl.TypedArgList([])))
     ## local predicates
@@ -142,30 +141,6 @@ def MakeCond(time, predName, predArgs = []):
         cond = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(predName, pddl.TypedArgList(argslist))]))
         return cond;
     else:
-        return;
-
-def MakeCond_test(time, predName, predArgs = [], isNotCond = False):
-    """ 9.10.2017 
-        time = 'start', 'end' ,'all'
-        predName = the name of the condition as string e.g 'act'
-        predArgs = list of the condition arguments e.g '['?a', '?c']'
-        isNotCond = true if user need a negative condition """
-    if len(predArgs) == 0: # the condition has no arguments
-        cond = pddl.TimedFormula(time,
-        pddl.Formula([pddl.Predicate(predName, pddl.TypedArgList([]))]))
-        # return cond;
-    elif isinstance(predArgs[0], str):
-        args = []
-        for arg in deepcopy(predArgs):
-            args.append(pddl.TypedArg(arg))
-        cond = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(predName, pddl.TypedArgList(args))]))
-        # return cond;
-    elif isinstance(predArgs[0], pddl.TypedArg):
-        argslist = deepcopy(predArgs)
-        cond = pddl.TimedFormula(time, pddl.Formula([pddl.Predicate(predName, pddl.TypedArgList(argslist))]))
-        # return cond;
-    if isNotCond:
-        negPredName = 'not( ' + predName
         return;
 
 def MakeNotWaitConds(pred, agents):
@@ -1322,7 +1297,7 @@ if __name__ == "__main__":
     make_preds = False
     make_funcs = False
     make_consts = False
-    make_action_s = False
+    make_action_s = True
     make_action_fstart = False
     make_action_fend = False
     make_action_finv_start = False
@@ -1338,22 +1313,14 @@ if __name__ == "__main__":
     make_files = False
     print_condition = True
     FixADL = False
-    test1 = True
 
-    # waitlist = []
-    # agentslist = ['c1', 'c2']
-    # domain_path = '../expfiles/crewplanning/p05-domain.pddl'
-    # problem_path = '../expfiles/crewplanning/p05.pddl'
-
-    waitlist = ['on-table']
-    agentslist = ['person1', 'person2']
-    domain_path = '../expfiles/drink/drink-world3.pddl'
-    problem_path = '../expfiles/drink/drink-prob3.pddl'
+    waitlist = []
+    agentslist = ['c1', 'c2']
+    domain_path = '../expfiles/crewplanning/p05-domain.pddl'
+    problem_path = '../expfiles/crewplanning/p05.pddl'
 
     if parse:
         (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
-    if test1:
-
     if make_preds:
         preds = MakePredicates(dom, prob, waitlist, print_condition)
     if make_funcs:
@@ -1385,6 +1352,8 @@ if __name__ == "__main__":
                 for cond in action.cond:
                     print ' ',cond.asPDDL()
     if make_action_s:
+        action = dom.durative_actions[1]
+        constants = MakeConstants(dom, prob)
         action_s = MakeActions_s(action, constants, waitlist, print_condition = True)
     if make_action_finv_start:
         action = dom.durative_actions[0]
