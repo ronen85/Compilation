@@ -18,6 +18,22 @@
       (rested ?d - driver)
       (tired ?d - driver))
 
+(:durative-action this_is_test_action
+      :parameters (?truck - truck ?driver - driver)
+      :duration (= ?duration 102)
+      :condition (and
+            (at start (prefstart ?driver))
+            (at start (prewstart ?truck))
+            (over all (inv ?driver))
+            (at end (prefend1 ?truck))
+            (at end (prefend2 ?truck)))
+      :effect (and
+            (at start (addstart ?driver))
+            (at start (not (delstart1 ?driver)))
+            (at start (not (delstart2 ?driver)))
+            (at end (addend ?driver))
+            (at end (not (delend ?driver)))))
+
 (:durative-action WORK
       :parameters (?driver - driver)
       :duration (= ?duration 102)
@@ -60,6 +76,7 @@
       :condition (and
             (over all (at ?truck ?loc))
             (at start (at ?obj ?loc)))
+
       :effect (and
             (at start (not (at ?obj ?loc)))
       	(at end (in ?obj ?truck))))

@@ -12,70 +12,161 @@ import itertools
 from copy import deepcopy
 from compilation_v1 import *
 
-def printBasicInfo(action, waitlist):
-    # grab basic conditions
-    pref_start = GrabCond('pref_start', action, waitlist)
-    prew_start = GrabCond('prew_start', action, waitlist)
-    pref_inv = GrabCond('pref_inv', action, waitlist)
-    pref_end = GrabCond('pref_end', action, waitlist)
-    # grab basic effects
-    add_start = GrabEff('add_start', action)
-    del_start = GrabEff('del_start', action)
-    add_end = GrabEff('add_end', action)
-    del_end = GrabEff('del_end', action)
-    # print info
-    print '\npref_start conds are: ',[a.asPDDL() for a in pref_start]
-    print 'prew_start conds are: ',[a.asPDDL() for a in prew_start]
-    print 'pref_inv are: ',[a.asPDDL() for a in pref_inv]
-    print 'pref_end are: ',[a.asPDDL() for a in pref_end], '\n'
-    print '\nadd start effects are: ',[a.asPDDL() for a in add_start]
-    print 'del start effects are: ',[a.asPDDL() for a in del_start]
-    print 'add end effects are: ',[a.asPDDL() for a in add_end]
-    print 'del end effects are: ',[a.asPDDL() for a in del_end], '\n'
-    return
+def printActionBasicInfo(action, params):
+	waitlist = params.waitlist
+	# grab basic conditions
+	pref_start = GrabCond('pref_start', action, params)
+	prew_start = GrabCond('prew_start', action, params)
+	pref_inv = GrabCond('pref_inv', action, params)
+	pref_end = GrabCond('pref_end', action, params)
+	neg_pref_start = GrabCond('neg_pref_start', action, params)
+	neg_prew_start = GrabCond('neg_prew_start', action, params)
+	neg_pref_inv =   GrabCond('neg_pref_inv', action, params)
+	neg_pref_end =   GrabCond('neg_pref_end', action, params)
+	# grab basic effects
+	add_start = GrabEff('add_start', action)
+	del_start = GrabEff('del_start', action)
+	add_end = GrabEff('add_end', action)
+	del_end = GrabEff('del_end', action)
+	# print info
+	print '\nthe action name is: ', action.name
+	print '\n################ conditions ################'
+	print 'pref_start conds are: ',[a.asPDDL() for a in pref_start]
+	print 'prew_start conds are: ',[a.asPDDL() for a in prew_start]
+	print 'pref_inv conds are: ',[a.asPDDL() for a in pref_inv]
+	print 'pref_end conds are: ',[a.asPDDL() for a in pref_end], '\n'
+	print 'the  negative conditions are: '
+	print 'pref_start negative conds are: ',[a.asPDDL() for a in neg_pref_start]
+	print 'prew_start negative conds are: ',[a.asPDDL() for a in neg_prew_start]
+	print 'pref_inv negative conds are: ',  [a.asPDDL() for a in neg_pref_inv]
+	print 'pref_end negative conds are: ',  [a.asPDDL() for a in neg_pref_end], '\n'
+	print '\n################## effects ##################'
+	print '\nadd start effects are: ',[a.asPDDL() for a in add_start]
+	print 'del start effects are: ',[a.asPDDL() for a in del_start]
+	print 'add end effects are: ',[a.asPDDL() for a in add_end]
+	print 'del end effects are: ',[a.asPDDL() for a in del_end], '\n'
+	return
 
 if __name__ == "__main__":
-    waitlist = ['working']
-    agentslist = ['d0', 'd1']
-    agentTypename = 'driver'
-    agentTypeparameter = 'driver' # e.g ?driver
-    domain_path =  '../expfiles/driverlog/domain.pddl'
-    problem_path = '../expfiles/driverlog/pfile1.pddl'
-    (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
-    params = CompilationParameters(domain_path, problem_path, agentTypename, agentTypeparameter, waitlist)
+	params = CompilationParameters()
+	params.waitlist = ['at', 'rested']
+	params.agentslist = ['d0', 'd1']
+	params.agentTypename = 'driver'
+	params.agentTypeparameter = 'driver' # e.g ?driver
+	params.domain_path =  '../expfiles/driverlog/domain.pddl'
+	params.problem_path = '../expfiles/driverlog/pfile1.pddl'
+	params.print_condition = False
 
-    get_preds = True
-    get_agents = False
-    make_funcs = False
-    make_consts = False
-    make_action_s = False
-    make_action_fstart = False
-    print_condition = True
-    print '\n'*100
-    if get_preds:
-        print '\n'*3,'Compiling predicates ...'
-        MakePredicates(dom, prob, params)
-    if get_agents:
-        print '\n'*3,\
-        'Agents type name is: ',agentTypename,', Getting agents now ...'
-        constants = MakeConstants(dom, prob)
-        agents = GetAgents(constants, agentTypename)
-        print 'the agents are: ', [a.asPDDL() for a in agents]
-    if make_funcs:
-        funcs = MakeFunctions(dom, prob, waitlist, True)
-    if make_consts:
-        print 'Getting constants now ...'
-        constants = MakeConstants(dom, prob, True)
-    if make_action_s:
-        print '\ncompiling action_s, Good Luck !'
-        action = dom.durative_actions[0]
-        constants = MakeConstants(dom, prob)
-        printBasicInfo(action, waitlist)
-        action_s = MakeActions_s(action, constants, waitlist, agentTypename, agentTypeparameter, print_condition = True)
-    if make_action_fstart:
-        action = dom.durative_actions[1]
-        print '\nthe action is: ', action.name
-        print 'compiling actions_fstart, Good Luck !'
-        constants = MakeConstants(dom, prob)
-        printBasicInfo(action, waitlist)
-        actions_fstart = MakeActions_fstart(action, constants, waitlist, print_condition)
+	(dom,prob) = pddl.parseDomainAndProblem(params.domain_path, params.problem_path)
+
+	get_preds = False
+	get_agents = False
+	make_funcs = False
+	make_consts = False
+	make_action_s = False
+	make_action_fstart = False
+	make_action_fend = False
+	make_action_finv_start = False
+	make_action_finv_end = False
+	make_action_wx = False
+	make_action_end_s = False
+	make_action_end_f = False
+	make_goals = False
+	make_initial_state = False
+	getObjectsOfType_test = False
+	make_compiled_domain = True
+	make_compiled_problem = True
+
+	print '\n'*100
+	if get_preds:
+		print '\n'*3,'Compiling predicates ...'
+		preds = MakePredicates(dom, prob, params)
+	if get_agents:
+		print '\n'*3,\
+		'Agents type name is: ',params.agentTypename,', Getting agents now ...'
+		constants = MakeConstants(dom, prob)
+		agents = GetAgents(constants, params)
+		print 'the agents are: ', [a.asPDDL() for a in agents]
+	if make_funcs:
+		funcs = MakeFunctions(dom, prob, waitlist, True)
+	if make_consts:
+		print 'Getting constants now ...'
+		constants = MakeConstants(dom, prob)
+		print 'the constants are:\n', constants.asPDDL()
+	if make_action_s:
+		print '\ncompiling action_s, Good Luck !'
+		action = dom.durative_actions[2]
+		constants = MakeConstants(dom, prob)
+		action_s = MakeActions_s(action, constants, params)
+		print '\ncompiled action info:'
+		printActionBasicInfo(action_s, params)
+	if make_action_fstart:
+		print '\ncompiling action_fstart, Good Luck !'
+		action = dom.durative_actions[1]
+		print '\noriginal action info:'
+		printActionBasicInfo(action, params)
+		constants = MakeConstants(dom, prob)
+		actions_fstart = MakeActions_fstart(action, constants, params)
+		print '\ncompiled action info:'
+		printActionBasicInfo(actions_fstart[0], params)
+	if make_action_fend:
+		print '\ncompiling action_fend, Good Luck !'
+		action = dom.durative_actions[0]
+		print '\noriginal action info:'
+		printActionBasicInfo(action, params)
+		constants = MakeConstants(dom, prob)
+		actions_fend = MakeActions_fend(action, constants, params)
+		print '\ncompiled action info:'
+		printActionBasicInfo(actions_fend[0], params)
+	if make_action_finv_start:
+		print '\ncompiling action_finv_start, Good Luck !'
+		action = dom.durative_actions[0]
+		print '\noriginal action info:'
+		printActionBasicInfo(action, params)
+		constants = MakeConstants(dom, prob)
+		action_finv_start = MakeAction_finv_start(action, constants, params)
+		print '\ncompiled action info:'
+		printActionBasicInfo(action_finv_start, params)
+	if make_action_finv_end:
+		print '\ncompiling action_finv_start, Good Luck !'
+		action = dom.durative_actions[0]
+		print '\noriginal action info:'
+		printActionBasicInfo(action, params)
+		constants = MakeConstants(dom, prob)
+		action_finv_end = MakeAction_finv_end(action, constants, params)
+		print '\ncompiled action info:'
+		printActionBasicInfo(action_finv_end, params)
+	if make_action_wx:
+		print '\ncompiling action_finv_start, Good Luck !'
+		action = dom.durative_actions[0]
+		print '\noriginal action info:'
+		printActionBasicInfo(action, params)
+		constants = MakeConstants(dom, prob)
+		action_wx = MakeActions_Wait(action, constants, params)
+		print '\ncompiled action info:'
+		printActionBasicInfo(action_wx[0], params)
+	if make_action_end_s:
+		end_s_actions = MakeActions_end_s(dom, prob, params)
+	if make_action_end_f:
+		end_f_actions = MakeActions_end_f(dom, prob, params)
+		print 'the comiled action is:'
+		print end_f_actions[0].asPDDL()
+	if make_goals:
+		print 'compiling goals:'
+		goal_state = MakeGoalState(dom, prob, params)
+	if make_initial_state:
+		print 'compiling initial state:'
+		constants = MakeConstants(dom, prob)
+		initial_state = MakeInitialState_new(dom, prob, constants, params)
+	if getObjectsOfType_test:
+		getObjectsOfType(dom, prob, 'locatable', params)
+	if make_compiled_domain:
+		print '\n'*2
+		# print 'Parsing domain ...'
+		# (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
+		print 'Parsing domain and problem complete.\n'
+		print 'Compiling new domain ...\n'
+		c_domain = MakeDomain(dom, prob, params)
+	if make_compiled_problem:
+		print '\n'*2
+		c_problem = MakeProblem(dom, prob, params)
