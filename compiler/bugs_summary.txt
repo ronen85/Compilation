@@ -1,0 +1,50 @@
+### fixes needed ###
+
+v isnt fin predicate syntax error
+
+v make end f can create same name actions
+
+- need to remove negative preconditions
+
+algorithm:
+v find all negative preds
+v fix predicates:
+  v make a reverse predicate fo all predicates in
+    list negPreds
+  - for all actions
+    v conditions
+      v where there are a negative precondition
+        delete and add a reverse call to a reverse 
+        pred
+        e.g: (not (act ..)) -> (isnt-act ...)
+    -------------------------------------------
+    v effects
+
+      - del effects for a neg pred -> 
+        add effect for a reverse neg-pred
+        e.g :(not (act ...)) ->חלק
+             (not (act ...)) + (isnt-act ...))  
+             ----------------------------------
+             (not (isnt-act ...)) ->
+             (not (isnt-act ...)) + (act ...))  
+
+      - add effect for a neg pred -> 
+        del effect for a reverse neg-pred
+        e.g :(act ...) ->
+             (act ...) + (not (isnt-act ...))  
+        e.g :(isnt-act ...) ->
+             (isnt-act ...) + (not (act ...))  
+
+
+- for problem
+ - for initial state
+   where there is none call for a neg pred add a reverse neg pred call.
+   for this end we need:
+   create all possible phase of reverse negative preds
+   check if this phase is in the initial state
+   if not: add it to initial state
+   else  : pass
+   option: do not create all possible phases and instead 
+           gather all domains actions 'reverse' type preconditions and create 
+           for them all possible phases - may be better.
+

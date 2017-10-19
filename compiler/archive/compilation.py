@@ -145,7 +145,7 @@ def MakeCond(time, predName, predArgs = []):
         return;
 
 def MakeCond_test(time, predName, predArgs = [], isNotCond = False):
-    """ 9.10.2017 
+    """ 9.10.2017
         time = 'start', 'end' ,'all'
         predName = the name of the condition as string e.g 'act'
         predArgs = list of the condition arguments e.g '['?a', '?c']'
@@ -1301,6 +1301,7 @@ def MakeProblem(dom, prob, agentslist, waitlist, print_condition = False):
     name = 'c' + prob.name
     domainname = 'c' + dom.name
     objects = pddl.TypedArgList([])
+    print 'TEST1'
     constants = MakeConstants(dom, prob)
     initialstate = MakeInitialState(dom, prob, agentslist, waitlist, constants, False)
     goal = MakeGoalState(dom, prob, agentslist, False)

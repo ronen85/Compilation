@@ -1,0 +1,9 @@
+fixes needed:
+
+- isnt fi predicate syntax error
+
+- make end f can create same name actions
+
+- need to remove negative preconditions
+
+

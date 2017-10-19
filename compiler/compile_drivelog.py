@@ -47,18 +47,7 @@ def printActionBasicInfo(action, params):
 	print 'del end effects are: ',[a.asPDDL() for a in del_end], '\n'
 	return
 
-if __name__ == "__main__":
-	params = CompilationParameters()
-	params.waitlist = ['at', 'rested']
-	params.agentslist = ['d0', 'd1']
-	params.agentTypename = 'driver'
-	params.agentTypeparameter = 'driver' # e.g ?driver
-	params.domain_path =  '../expfiles/driverlog/domain.pddl'
-	params.problem_path = '../expfiles/driverlog/pfile1.pddl'
-	params.print_condition = False
-
-	(dom,prob) = pddl.parseDomainAndProblem(params.domain_path, params.problem_path)
-
+def debug():
 	get_preds = False
 	get_agents = False
 	make_funcs = False
@@ -76,7 +65,6 @@ if __name__ == "__main__":
 	getObjectsOfType_test = False
 	make_compiled_domain = True
 	make_compiled_problem = True
-
 	print '\n'*100
 	if get_preds:
 		print '\n'*3,'Compiling predicates ...'
@@ -160,13 +148,40 @@ if __name__ == "__main__":
 		initial_state = MakeInitialState_new(dom, prob, constants, params)
 	if getObjectsOfType_test:
 		getObjectsOfType(dom, prob, 'locatable', params)
+	return;
+
+if __name__ == "__main__":
+	params = CompilationParameters()
+	params.waitlist = ['at', 'rested']
+	params.agentslist = ['driver1', 'driver2']
+	params.agentTypename = 'driver'
+	params.agentTypeparameter = 'driver' # e.g ?driver
+	params.domain_path =  '../expfiles/driverlog/corrected_domain.pddl'
+	params.problem_path = '../expfiles/driverlog/p0.pddl'
+	params.print_condition = False
+
+	(dom,prob) = pddl.parseDomainAndProblem(params.domain_path, params.problem_path)
+
+	make_compiled_domain = True
+	make_compiled_problem = True
+	make_files = True
+
+	print '\n'*100
+
 	if make_compiled_domain:
-		print '\n'*2
-		# print 'Parsing domain ...'
-		# (dom,prob) = pddl.parseDomainAndProblem(domain_path, problem_path)
-		print 'Parsing domain and problem complete.\n'
-		print 'Compiling new domain ...\n'
+		print 'Compiling new domain ...'
 		c_domain = MakeDomain(dom, prob, params)
+		print 'Compiling new domain complete.\n'
+		if make_files:
+			c_domain_file = open('c_domain_file_tmp.pddl','wb')
+			c_domain_file.write(c_domain.asPDDL())
+			c_domain_file.close()
+
 	if make_compiled_problem:
-		print '\n'*2
+		print 'Compiling new problem ...'
 		c_problem = MakeProblem(dom, prob, params)
+		print 'Compiling new problem complete.\n'
+		if make_files:
+			c_problem_file = open('c_problem_file_tmp.pddl','wb')
+			c_problem_file.write(c_problem.asPDDL())
+			c_problem_file.close()

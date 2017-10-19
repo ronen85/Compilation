@@ -15,11 +15,13 @@
   :parameters
    (?obj - obj
     ?truck - truck
-    ?loc - location)
+    ?loc - location
+    ?driver - driver)
   :duration (= ?duration 2)
   :condition
    (and 
-   (over all (at ?truck ?loc)) (at start (at ?obj ?loc)))
+   (over all (at ?truck ?loc)) 
+   (at start (at ?obj ?loc)))
   :effect
    (and (at start (not (at ?obj ?loc))) (at end (in ?obj ?truck))))
 
@@ -27,7 +29,8 @@
   :parameters
    (?obj - obj
     ?truck - truck
-    ?loc - location)
+    ?loc - location
+    ?driver - driver)
   :duration (= ?duration 2)
   :condition
    (and

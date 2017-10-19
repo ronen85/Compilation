@@ -10,6 +10,7 @@ import pddlLexer
 import pddlParser
 import itertools
 from copy import deepcopy
+# from random import randint
 
 class CompilationParameters(object):
 	"""	domain parameters to be compiled.
@@ -68,8 +69,8 @@ def MakePredicates(dom, prob, params):
 	predicates = []
 	## fin, isnt-fin, act, failure
 	predicates.append(pddl.Predicate(u'fin', pddl.TypedArgList([pddl.TypedArg( '?'+params.agentTypeparameter, params.agentTypename)])))
-	if params.fixADL:
-		predicates.append(pddl.Predicate(u'isnt-fin', pddl.TypedArgList([pddl.TypedArg( params.agentTypeparameter, params.agentTypename)]))) # upgrade to ADL support
+	# if params.fixADL:
+	predicates.append(pddl.Predicate(u'isnt-fin', pddl.TypedArgList([pddl.TypedArg( '?'+params.agentTypeparameter, params.agentTypename)]))) # upgrade to ADL support
 	predicates.append(pddl.Predicate(u'act', pddl.TypedArgList([])))
 	predicates.append(pddl.Predicate(u'failure', pddl.TypedArgList([])))
 	## local predicates
@@ -1265,10 +1266,12 @@ def MakeActions_end_f(dom, prob, params):
 	print_condition = params.print_condition
 	if print_condition: print '\nMaking end_f actions:'
 	end_f_actions = []
+	i = 0
 	for name in agentslist:
 		agent_goals = GrabGoals(prob, name, params)
 		for inverse_goal in agent_goals:
-			action_name = 'end-' + name + '-' + inverse_goal.name +'-f'
+			i += 1
+			action_name = 'end-' + name + '-' + inverse_goal.name +'-f-'+ str(i)
 			parameters = pddl.TypedArgList([])
 			pre = MakeConds_end_f(prob, name, inverse_goal, params)
 			effs = MakeEffs_end_f(name, print_condition)
@@ -1450,7 +1453,6 @@ def MakeInitialState(dom, prob, constants, params):
 		f_global.subformulas[0].name += '-g'
 		initial_state.append(f_global)
 	# {f_inv = 0 V f e F}
-	print '\n'*100
 	invs_forms = []
 	preds = deepcopy(dom.predicates)
 	for pred in preds:
@@ -1472,7 +1474,6 @@ def MakeInitialState(dom, prob, constants, params):
 	# 	print form.asPDDL()
 	initial_state += invs_forms
 	# not(f_wait)
-	print '\n'*100
 	wait_forms = []
 	for pred in dom.predicates:
 		if not pred.name in waitlist:
@@ -1517,7 +1518,7 @@ def MakeGoalState(dom, prob, params):
 		print goal_state.asPDDL()
 	return goal_state
 
-def getObjectsOfType(dom, prob, objType, params):
+def getObjectsOfType(dom, prob, objType, params = None):
 	listOftypes = []
 	listOfobjects = []
 	listOftypes.append(objType)
@@ -1532,10 +1533,11 @@ def getObjectsOfType(dom, prob, objType, params):
 	for objArg in constants.args:
 		if objArg.arg_type in listOftypes:
 			listOfobjects.append(objArg.arg_name)
-	if params.print_condition:
-		print 'the objType is: ', objType
-		print 'listOftypes is: ', listOftypes
-		print 'listOfobjects is: ', listOfobjects
+	if not params == None :
+		if params.print_condition:
+			print 'the objType is: ', objType
+			print 'listOftypes is: ', listOftypes
+			print 'listOfobjects is: ', listOfobjects
 	return listOfobjects
 
 def MakeProblem(dom, prob, params):

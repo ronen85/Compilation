@@ -5,10 +5,11 @@
 
 	(:types cup agent)
 
- 	(:constants )
+	(:constants driver1 - driver driver2 - driver truck1 - truck package3 - obj  s3 - location s4 - location )
 
 
 	(:predicates
+				(at-g ?obj - locatable ?loc - location)
 	      (thirsty ?a - agent)
 	      ;(isnt-thirsty ?a - agent)
 	      (hold-cup ?a - agent ?c - cup)
@@ -23,6 +24,20 @@
 
 		(:functions
 				(amount1 ?c - cup))
+
+		(:action end-driver2-at-f-2
+			:parameters ()
+			:precondition (and
+			(isnt-fin driver2)
+			(at-l driver2 driver2 s1)
+			(at-l driver2 truck2 s1)
+			(not (at-g driver2 s1)))
+			:effect (and
+			(failure )
+			(fin driver2)
+			(not (isnt-fin driver2))
+			(not (act ))))
+
 
   	(:durative-action take-cup
   		;;pref start = {clear ?a}
