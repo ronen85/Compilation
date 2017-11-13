@@ -1498,7 +1498,6 @@ def MakeInitialState(dom, prob, constants, params):
 			print f.asPDDL()
 	return initial_state;
 
-
 def MakeGoalState(dom, prob, params):
 	agentslist = params.agentslist
 	print_condition = params.print_condition
@@ -1597,6 +1596,7 @@ if __name__ == "__main__":
 		agentTypename = 'agent'
 		domain_path = '../expfiles/drink/drink-world3.pddl'
 		problem_path = '../expfiles/drink/drink-prob3.pddl'
+		
 	elif loadDriver:
 		print 'driver problem is loaded'
 		waitlist = []

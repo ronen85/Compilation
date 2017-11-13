@@ -1,6 +1,9 @@
 # Temporary PDDL files
 *tmp.pddl
 
+# Temporary files
+*~
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
