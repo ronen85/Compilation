@@ -1,4 +1,4 @@
-# Code for thesis
+# Temporal STRIPS Automated Verification of Social Laws
 This is a tool used to test a compilation based method. 
 this tool is partially based on: 
  [https://github.com/hfoffani/pddl-lib]
